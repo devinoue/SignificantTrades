@@ -170,26 +170,41 @@ export default {
             const littleBigAmount = 4_000_000
             const littleLittleAmount = 3_000_000
 
-            if (formatAmount(trade.price * trade.size) === '6M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
-              reasons.push('bitmexで6Mちょうどのロング正指標')
+            if (formatAmount(trade.price * trade.size) === '10M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
+              // 使う
+              reasons.push({ reason: 'bitmexで10Mちょうどのロング正指標', code: 'bitmex10M', span: 100, sameLength: 10, side: trade.side })
+            } else if (formatAmount(trade.price * trade.size) === '6M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
+              // 使う
+              reasons.push({ reason: 'bitmexで6Mちょうどのロング正指標', code: 'bitmex6M', span: 100, sameLength: 10, side: trade.side })
             } else if (trade.price * trade.size > bigAmount && trade.exchange === 'bitmex' && trade.side === 'buy') {
-              reasons.push('bitmexで6M以上ロング正指標')
+              // reasons.push({ reason: 'bitmexで6M以上ロング正指標', code: '', span: 100, sameLength: null })
+              console.log(`%cbitmexで6M以上ロング正指標`, 'color:red')
             } else if (trade.price * trade.size >= bigAmount && trade.exchange === 'bitmex' && trade.side === 'sell') {
-              reasons.push('bitmexで6M以上ショート')
+              // reasons.push({ reason: 'bitmexで6M以上ショート', code: '', span: 100, sameLength: null })
+              console.log(`%cbitmexで6M以上ショート`, 'color:red')
             }
             //  else if (trade.price * trade.size >= littleLittleAmount && trade.exchange === 'bitmex') {
             //   reasons.push('bitmexで3M以上正指標説')
             // }
 
-            if (trade.price * trade.size >= littleBigAmount && trade.exchange === 'bybit') {
-              reasons.push('bybitで4M以上正指標説')
+            if (trade.price * trade.size >= 5_000_000 && trade.exchange === 'bybit') {
+              // 使う
+              reasons.push({ reason: 'bybitで5M以上正指標説', code: 'bybit5M', span: 200, sameLength: 10, side: trade.side })
+            } else if (trade.price * trade.size >= 4_500_000 && trade.exchange === 'bybit') {
+              // 使う
+              reasons.push({ reason: 'bybitで4.5M以上正指標説', code: 'bybit4_5M', span: 160, sameLength: 10, side: trade.side })
+            } else if (trade.price * trade.size >= 4_000_000 && trade.exchange === 'bybit') {
+              // 使う
+              reasons.push({ reason: 'bybitで4M以上正指標説', code: 'bybit4M', span: 100, sameLength: 10, side: trade.side })
             }
             if (trade.exchange === 'huobi') {
-              reasons.push('取引所huobi')
+              // 使う
+              reasons.push({ reason: '取引所huobi', code: 'huobi', span: 150, sameLength: 10 })
             }
 
-            if (['gdax', 'bitstamp'].includes(trade.exchange)) {
-              reasons.push('取引所がいい')
+            if (['gdax', 'bitstamp', 'okex'].includes(trade.exchange)) {
+              // reasons.push({ reason: '取引所がいい', code: '', span: 100, sameLength: null })
+              console.log(`%c取引所がいい`, 'color:red')
             }
           }
           return reasons
@@ -205,7 +220,7 @@ export default {
 
           let amount = 0
           if (data.length >= 4) {
-            console.log('4つ以上ある！')
+            console.log(`%c4つ以上ある！`, 'color:red')
           }
           let binance = 0
           let bitmex = 0
@@ -219,22 +234,76 @@ export default {
           const reasons = isGoodTrade(data)
 
           if (binance === 2) {
-            // console.log('来ました！ダブルbinance！！！！')
-          } else if (data.length === 2) {
-            reasons.push('ダブル指標')
+            reasons.push({ reason: 'テスト用ダブバイナンス', code: 'binance', span: 100, side: 'buy', sameLength: null })
           } else if (bybit === 2) {
-            reasons.push('ダブルbybit')
+            // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
+            console.log(`%cダブルbybit`, 'color:red')
+          } else if (data.length === 2) {
+            // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
+            console.log(`%cダブル指標`, 'color:red')
           }
 
           if (bitmex > 0 && data.length > 1) {
-            reasons.push('bitmexを含む多重取引所は正指標説')
+            // buyとsell両方が含まれているかチェック
+            const existBuy = data.some(t => t.side === 'buy')
+            const existSell = data.some(t => t.side === 'sell')
+            const isGood = existBuy && existSell
+            if (isGood) {
+              const allBitmex = data.filter(t => t.exchange === 'bitmex')
+              const latestBitmex = allBitmex[allBitmex.length - 1]
+              reasons.push({ reason: 'bitmex逆張り正指標説', code: 'bitmexCon', span: 200, sameLength: 10, side: latestBitmex.side })
+              console.log('bitmex逆張り正指標説 side: ', latestBitmex.side, '最新時間: ', latestBitmex.timestamp)
+            } else {
+              console.log(`%cbitmex他取引所指標チェック`, 'color:red')
+              // reasons.push({ reason: 'bitmex他取引所指標チェック', span: 100, sameLength: 10, side: null })
+            }
           }
+          // bybit三連撃
+          if (bybit >= 3) {
+            const isSameSide = data.every(t => data[0].side === t.side)
+            if (isSameSide) {
+              reasons.push({ reason: 'bybit三連以上は正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
+            }
+          }
+          //理由の表示
           if (reasons.length > 0) {
-            console.table(reasons)
-            const message = reasons.reduce((acc, val) => acc + val + '\n', '')
+            const message = reasons.reduce((acc, val) => acc + val.reason + '\n', '')
             console.log(`%c${message}`, 'color:red')
-          } else {
-            console.log(reasons.length)
+          }
+
+          // 条件チェック。「売買する理由」を集めて調整する
+          const checkAllReasons = reasons => {
+            const result = { side: null, priceRange: 0 }
+            if (reasons.length === 0) return { error: 'なし', result }
+
+            // 方向チェック、すべてbuyまたはすべてsellと方向が揃ってるならOK。１つでも異なるならNG
+            const sides = reasons.map(t => t.side)
+            const isEverySameSide = sides.every(s => sides[0] === s)
+            if (!isEverySameSide) return { error: 'reasonsの全てのポジが同じ方向ではない', result: null }
+
+            // 最大値チェック。ポジりたい値幅の最大値を取得
+            const priceRanges = reasons.map(t => t.span)
+            const maxPriceRange = Math.max(...priceRanges)
+
+            // huobiチェック。今の所huobiは１つだけを想定
+            const num = reasons.length
+            const isInvalidForHuobi = reasons.some(reason => reason.code === 'huobi' && num !== 1)
+            if (isInvalidForHuobi) return { error: 'huobiはあるが１ではない', result: null }
+
+            result.side = sides[0]
+            result.priceRange = maxPriceRange
+
+            return { error: null, result }
+          }
+          // 理由があるとき
+          if (reasons.length > 0) {
+            const result = checkAllReasons(reasons)
+            if (result.error) {
+              console.log(`%c${result.error}`, 'color:red')
+            } else {
+              // ここで売買を実行
+              console.table(result.result)
+            }
           }
 
           setTimeout(() => {
