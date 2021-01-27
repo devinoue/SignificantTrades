@@ -1266,6 +1266,10 @@ export default class ChartController {
           }
         }
       }
+      // console.log(this.activeSeries)
+      store.commit('app/SET_PREV_PRICE', store.state.app.newPrice)
+
+      store.commit('app/SET_NEW_PRICE', renderer.series['price'].value)
       // storeに登録
       const tempValue = renderer.series[this.activeSeries[this.activeSeries.length - 2].id].value
       store.commit('app/SET_LATEST_AMOUNT', tempValue)

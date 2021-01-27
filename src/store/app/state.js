@@ -11,5 +11,7 @@ export default {
   apiUrl: null,
   version: 'DEV',
   buildDate: 'now',
-  newAmount: 0
+  newAmount: 0,
+  newPrice: 0,
+  prevPrice: 0
 }
