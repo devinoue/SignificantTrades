@@ -1267,9 +1267,17 @@ export default class ChartController {
         }
       }
       // console.log(this.activeSeries)
-      store.commit('app/SET_PREV_PRICE', store.state.app.newPrice)
+      //store.commit('app/SET_PREV_PRICE', store.getters.app.newPrice)
+      store.dispatch('app/setPrevPrice', { price: store.state.app.newPrice })
+      store.dispatch('app/setNewPrice', { price: renderer.series['price'].value })
+      // 過去の
+      const newPrices = store.state.app.newPrices
+      if (newPrices.length > 200) newPrices.unshift()
 
-      store.commit('app/SET_NEW_PRICE', renderer.series['price'].value)
+      newPrices.push({ timestamp: renderer.timestamp, price: renderer.series['price'].value })
+      store.commit('app/SET_PRICES', newPrices)
+      // store.commit('app/SET_NEW_PRICE', renderer.series['price'].value)
+      // console.log(store.app.getters)
       // storeに登録
       const tempValue = renderer.series[this.activeSeries[this.activeSeries.length - 2].id].value
       store.commit('app/SET_LATEST_AMOUNT', tempValue)

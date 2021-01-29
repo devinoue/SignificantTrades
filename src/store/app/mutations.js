@@ -55,6 +55,9 @@ export default {
   SET_NEW_PRICE(state, value) {
     state.newPrice = value
   },
+  SET_PRICES(state, value) {
+    state.newPrices = value
+  },
   SET_API_SUPPORTED_PAIRS(state, value) {
     if (!value) {
       state.apiSupportedPairs = []

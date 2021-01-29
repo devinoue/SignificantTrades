@@ -1,4 +1,10 @@
 export default {
+  setPrevPrice({ commit }, payload) {
+    commit('SET_PREV_PRICE', payload.price)
+  },
+  setNewPrice({ commit }, payload) {
+    commit('SET_NEW_PRICE', payload.price)
+  },
   refreshExchange({ commit }, exchange) {
     const active =
       !this.state.settings.exchanges[exchange] ||

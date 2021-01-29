@@ -13,5 +13,7 @@ export default {
   buildDate: 'now',
   newAmount: 0,
   newPrice: 0,
-  prevPrice: 0
+  prevPrice: 0,
+  newPrices: [],
+  precPrices: []
 }
