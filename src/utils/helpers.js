@@ -51,6 +51,30 @@ export function formatAmount(amount, decimals) {
   }
 }
 
+export function simpleFormatAmount(amount, decimals) {
+  const negative = amount < 0
+
+  amount = Math.ceil(Math.abs(amount) * 1000000000) / 1000000000
+
+  if (amount >= 1000000) {
+    amount = +(amount / 1000000).toFixed(isNaN(decimals) ? 1 : decimals)
+  } else if (amount >= 100000) {
+    amount = +(amount / 1000).toFixed(isNaN(decimals) ? 0 : decimals) + 'K'
+  } else if (amount >= 1000) {
+    amount = +(amount / 1000).toFixed(isNaN(decimals) ? 1 : decimals) + 'K'
+  } else if (store.state.settings.decimalPrecision) {
+    amount = amount.toFixed(store.state.settings.decimalPrecision)
+  } else {
+    amount = +amount.toFixed(4)
+  }
+
+  if (negative) {
+    return '-' + amount
+  } else {
+    return amount
+  }
+}
+
 export function countDecimals(value) {
   if (Math.floor(value) === value) return 0
   return value.toString().split('.')[1].length || 0
