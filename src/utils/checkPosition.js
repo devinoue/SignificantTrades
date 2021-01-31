@@ -18,7 +18,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
       const direction = '上昇'
       const utcTime = new Date(timestamp * 1000).toUTCString()
 
-      const mainData = [utcTime, timestamp, unixtime, Math.round(price), direction]
+      const mainData = [utcTime, unixtime, timestamp, Math.round(price), direction]
 
       const postData = {
         sheet: value.sheet,
@@ -34,7 +34,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
       const direction = '下降'
       const utcTime = new Date(timestamp * 1000).toUTCString()
 
-      const mainData = [utcTime, timestamp, unixtime, Math.round(price), direction]
+      const mainData = [utcTime, unixtime, timestamp, Math.round(price), direction]
 
       const postData = {
         sheet: value.sheet,

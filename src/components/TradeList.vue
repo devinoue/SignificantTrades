@@ -309,7 +309,7 @@ export default {
           const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
           if (binance.length === 2 && data.length === 2) {
             console.log(`%cダブルバイナンス`, 'color:red')
-            positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'test', close: Math.round(priceSet.close) })
+            // positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'test', close: Math.round(priceSet.close) })
             console.log(
               `${Math.round(priceSet.close)} からダブルバイナンススタート${Math.round(priceSet.close) + 100}か、${Math.round(priceSet.close) -
                 100}で終わり`
@@ -317,7 +317,7 @@ export default {
             console.log(positions)
             // reasons.push({ reason: 'テスト用ダブバイナンス', code: 'binance', span: 100, side: 'buy', sameLength: null })
 
-            twoSetData(binance, data, priceSet, speeds, 'test')
+            // twoSetData(binance, data, priceSet, speeds, 'test')
           } else if (bybit.length === 2 && data.length === 2) {
             // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
             positions = setPositions(positions, { timestamp: bybit[0].timestamp, sheet: 'wbybit', close: Math.round(priceSet.close) })
