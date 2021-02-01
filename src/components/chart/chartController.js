@@ -1273,7 +1273,6 @@ export default class ChartController {
       // 過去の
       const newPrices = store.state.app.newPrices
       if (newPrices.length > 200) newPrices.unshift()
-
       newPrices.push({ timestamp: renderer.timestamp, price: renderer.series['price'].value })
       store.commit('app/SET_PRICES', newPrices)
       // store.commit('app/SET_NEW_PRICE', renderer.series['price'].value)

@@ -211,25 +211,39 @@ export default {
             const bigAmount = 6_000_000
             const littleBigAmount = 4_000_000
             const littleLittleAmount = 3_000_000
-
+            let isKouho = false
             if (formatAmount(trade.price * trade.size) === '10M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
               // 使う
+              isKouho = true
               reasons.push({ reason: 'bitmexで10Mちょうどのロング正指標', code: 'bitmex10M', span: 100, sameLength: 10, side: trade.side })
             } else if (formatAmount(trade.price * trade.size) === '6M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
               // 使わない
+              isKouho = true
               console.log(`%cbitmexで6Mちょうどロング正指標`, 'color:red')
               // reasons.push({ reason: 'bitmexで6Mちょうどのロング正指標', code: 'bitmex6M', span: 100, sameLength: 10, side: trade.side })
             } else if (trade.price * trade.size > bigAmount && trade.exchange === 'bitmex' && trade.side === 'buy') {
               // reasons.push({ reason: 'bitmexで6M以上ロング正指標', code: '', span: 100, sameLength: null })
+              isKouho = true
               console.log(`%cbitmexで6M以上ロング正指標`, 'color:red')
             } else if (trade.price * trade.size >= bigAmount && trade.exchange === 'bitmex' && trade.side === 'sell') {
               // reasons.push({ reason: 'bitmexで6M以上ショート', code: '', span: 100, sameLength: null })
+              isKouho = true
               console.log(`%cbitmexで6M以上ショート`, 'color:red')
             }
             //  else if (trade.price * trade.size >= littleLittleAmount && trade.exchange === 'bitmex') {
             //   reasons.push('bitmexで3M以上正指標説')
             // }
             const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
+
+            if (isKouho) {
+              oneSetData(trade, data, priceSet, speeds, 'kouho')
+              positions = setPositions(positions, {
+                timestamp: trade.timestamp,
+                sheet: 'kouho',
+                close: Math.round(priceSet.close)
+              })
+            }
+
             if (trade.price * trade.size >= 5_000_000 && trade.exchange === 'bybit') {
               // 使う
               positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
@@ -366,6 +380,12 @@ export default {
                   sheet: 'test',
                   close: Math.round(priceSet.close)
                 })
+                oneSetData(allNotBitmexAndBinance[0], data, priceSet, speeds, 'kouho')
+                positions = setPositions(positions, {
+                  timestamp: allNotBitmexAndBinance[0].timestamp,
+                  sheet: 'kouho',
+                  close: Math.round(priceSet.close)
+                })
                 console.log(`%cbitmexかついい感じに大きな取引を伴っている`, 'color:red')
               } else {
                 console.log(`%cbitmex他取引所指標チェック`, 'color:red')
@@ -389,10 +409,12 @@ export default {
             }
           }
           // bybit三連撃(廃止)
-          if (bybit >= 3) {
+          if (bybit.length === 3 || bybit.length === 4) {
             const allBybit = data.filter(t => t.exchange === 'bybit')
             const isSameSide = allBybit.every(t => data[0].side === t.side)
             if (isSameSide) {
+              twoSetData(allBybit, data, priceSet, speeds, '3bybit')
+              positions = setPositions(positions, { timestamp: allBybit[0].timestamp, sheet: '3bybit', close: Math.round(priceSet.close) })
               // reasons.push({ reason: 'bybit三連以上は正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
             }
           }
