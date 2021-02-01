@@ -341,6 +341,8 @@ export default {
           } else if (data.length === 2) {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%cダブル指標`, 'color:red')
+            positions = setPositions(positions, { timestamp: data[0].timestamp, sheet: 'windex', close: Math.round(priceSet.close) })
+            twoSetData(data, data, priceSet, speeds, 'windex')
           }
 
           if (deribit > 0 && data.length > 1) {
