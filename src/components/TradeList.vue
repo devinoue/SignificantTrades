@@ -40,7 +40,7 @@ const analyseTradeSpeed = sample => {
 }
 let positions = []
 const { setPositions, checkCurrentPrice } = checkPosition()
-
+const startTime = new Date().getTime()
 let speedSamples = []
 const tradeSpeedSamplesMaxInSec = 600 // 過去600秒だけサンプリングする。
 
@@ -670,6 +670,9 @@ export default {
           table['unixtime'] = trade.timestamp
           table['size'] = trade.size
           console.table(table)
+          const diffTime = Date.now() - startTime
+          const passHours = Math.floor(diffTime / (60 * 60 * 1000))
+          console.log(`経過時間: ${passHours}`)
         }
         const amount_base = document.createElement('span')
         amount_base.className = 'trade__amount__base'
