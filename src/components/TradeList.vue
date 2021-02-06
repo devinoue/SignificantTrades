@@ -336,30 +336,24 @@ export default {
           }
           const reasons = isGoodTrade(data, priceSet)
           const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60), getAvarageSpeed(90), getAvarageSpeed(180)]
-          if (binance.length === 2 && data.length === 2) {
+          if (binance.length === 2 && data.length === 2 && getAvarageSpeed(6) > 50000) {
             console.log(`%cダブルバイナンス`, 'color:red')
+
             // positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'test', close: Math.round(priceSet.close) })
             console.log(
               `${Math.round(priceSet.close)} からダブルバイナンススタート${Math.round(priceSet.close) + 100}か、${Math.round(priceSet.close) -
                 100}で終わり`
             )
-            console.log(positions)
-            // reasons.push({ reason: 'テスト用ダブバイナンス', code: 'binance', span: 100, side: 'buy', sameLength: null })
 
-            // twoSetData(binance, data, priceSet, speeds, 'test')
-            positions = setPosition(positions, binance, data, priceSet, speeds, 'test', 2)
+            positions = setPosition(positions, binance, data, priceSet, speeds, '50k_binance', 2)
           } else if (bybit.length === 2 && data.length === 2) {
             // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
-            // positions = setPositions(positions, { timestamp: bybit[0].timestamp, sheet: 'wbybit', close: Math.round(priceSet.close) })
-            // twoSetData(bybit, data, priceSet, speeds, 'wbybit')
 
             positions = setPosition(positions, bybit, data, priceSet, speeds, 'wbybit', 2)
             console.log(`%cダブルbybit`, 'color:red')
           } else if (data.length === 2) {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%cダブル指標`, 'color:red')
-            // positions = setPositions(positions, { timestamp: data[0].timestamp, sheet: 'windex', close: Math.round(priceSet.close) })
-            // twoSetData(data, data, priceSet, speeds, 'windex', true)
 
             positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
           }
