@@ -58,6 +58,9 @@ export default {
   SET_PRICES(state, value) {
     state.newPrices = value
   },
+  SET_SPEEDS(state, value) {
+    state.savedSpeeds = value
+  },
   SET_API_SUPPORTED_PAIRS(state, value) {
     if (!value) {
       state.apiSupportedPairs = []

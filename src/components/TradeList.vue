@@ -10,7 +10,7 @@ import { mapState } from 'vuex'
 
 import { ago, formatPrice, formatAmount } from '../utils/helpers'
 import { getColorByWeight, getColorLuminance, getAppBackgroundColor, splitRgba, getLogShade } from '../utils/colors'
-import { getNoldPriceRange, oneSetData, twoSetData } from '../utils/priceHelper'
+import { getNMinutesOldPrice, getNoldPriceRange } from '../utils/priceHelper'
 import { awsApiUrl, gasApiUrl } from '../../env'
 import socket from '../services/socket'
 import Sfx from '../services/sfx'
@@ -39,10 +39,10 @@ const analyseTradeSpeed = sample => {
   return MAX_TRADE_SAMPLES / diff
 }
 let positions = []
-const { setPositions, checkCurrentPrice } = checkPosition()
-const startTime = new Date().getTime()
+const { setPosition, checkCurrentPrice } = checkPosition()
+const startTime = new Date().getTime() // 開始時間を保存しておく
 let speedSamples = []
-const tradeSpeedSamplesMaxInSec = 600 // 過去600秒だけサンプリングする。
+const tradeSpeedSamplesMaxInSec = 1800 // 過去1800秒(30分)だけサンプリングする。
 
 const maintainTradeSpeedSamples = trades => {
   const maxMilliSec = tradeSpeedSamplesMaxInSec
@@ -65,6 +65,7 @@ const maintainTradeSpeedSamples = trades => {
 }
 
 const getAvarageSpeed = (period = 60) => {
+  if (speedSamples.length < period) return 0
   const tmpSpeeds = speedSamples.slice(period * -1)
   const speeds = tmpSpeeds.map(sample => sample.value)
   const total = speeds.reduce((acc, value) => acc + value, 0)
@@ -192,6 +193,9 @@ export default {
   },
   methods: {
     async onTrades(trades) {
+      if (speedSamples.length === 0) {
+        speedSamples = this.$store.state.app.savedSpeeds
+      }
       positions = checkCurrentPrice(
         positions,
         this.$store.state.app.newPrices.slice(-1)[0]?.price ?? 0,
@@ -233,58 +237,69 @@ export default {
             //  else if (trade.price * trade.size >= littleLittleAmount && trade.exchange === 'bitmex') {
             //   reasons.push('bitmexで3M以上正指標説')
             // }
-            const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
+            const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60), getAvarageSpeed(90), getAvarageSpeed(180)]
 
             if (isKouho) {
-              oneSetData(trade, data, priceSet, speeds, 'kouho')
-              positions = setPositions(positions, {
-                timestamp: trade.timestamp,
-                sheet: 'kouho',
-                close: Math.round(priceSet.close)
-              })
+              // oneSetData(trade, data, priceSet, speeds, 'kouho')
+              // positions = setPositions(positions, {
+              //   timestamp: trade.timestamp,
+              //   sheet: 'kouho',
+              //   close: Math.round(priceSet.close)
+              // })
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'kouho', 1)
             }
 
             if (trade.price * trade.size >= 5_000_000 && trade.exchange === 'bybit') {
               // 使う
-              positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
-              reasons.push({ reason: 'bybitで5M以上正指標説', code: 'bybit5M', span: 200, sameLength: 10, side: trade.side })
-              oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
+              // reasons.push({ reason: 'bybitで5M以上正指標説', code: 'bybit5M', span: 200, sameLength: 10, side: trade.side })
+              // oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             } else if (trade.price * trade.size >= 4_500_000 && trade.exchange === 'bybit') {
               // 使う
-              positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
-              reasons.push({ reason: 'bybitで4.5M以上正指標説', code: 'bybit4_5M', span: 160, sameLength: 10, side: trade.side })
-              oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              // reasons.push({ reason: 'bybitで4.5M以上正指標説', code: 'bybit4_5M', span: 160, sameLength: 10, side: trade.side })
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             } else if (trade.price * trade.size >= 4_000_000 && trade.exchange === 'bybit') {
               // 使う
-              positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
-              reasons.push({ reason: 'bybitで4M以上正指標説', code: 'bybit4M', span: 100, sameLength: 10, side: trade.side })
-              oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              // reasons.push({ reason: 'bybitで4M以上正指標説', code: 'bybit4M', span: 100, sameLength: 10, side: trade.side })
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bybit4over', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'bybit4over')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             }
             if (trade.exchange === 'huobi') {
               // 使う
               reasons.push({ reason: '取引所huobi', code: 'huobi', span: 150, sameLength: 10 })
-              positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'huobi', close: Math.round(priceSet.close) })
-              oneSetData(trade, data, priceSet, speeds, 'huobi')
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'huobi', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'huobi')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'huobi', 1)
             }
 
+            if (trade.exchange === 'bitfinex') {
+              // 使う
+              console.log(`%c取引所bitfinex`, 'color:red')
+              reasons.push({ reason: '取引所bitfinex', code: 'bitfinex', span: 150, sameLength: 10 })
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bitfinex', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'bitfinex')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bitfinex', 1)
+            }
+            // 気になる
+            if (trade.exchange === 'binance') {
+              // 使う
+              console.log(`%c取引所binance`, 'color:red')
+              reasons.push({ reason: '取引所binance', code: 'binance', span: 150, sameLength: 10 })
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bitfinex', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'bitfinex')
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'binance', 1)
+            }
             // 気になる数字
-            if (formatAmount(trade.price * trade.size, 2) === '1.43M' && trade.exchange === 'bitmex') {
-              // 使わない(今の所)
-              console.log(`%cbitmexで1.43きたがいい`, 'color:red')
-            }
-            if (formatAmount(trade.price * trade.size, 2) === '1.83M' && trade.exchange === 'binance_futures') {
-              // 使わない(今の所)
-              console.log(`%cbinance_futuresで1.83きたがいい`, 'color:red')
-            }
-            if (formatAmount(trade.price * trade.size, 2) === '1.65M' && trade.exchange === 'binance_futures') {
-              // 使わない(今の所)
-              console.log(`%cbinance_futuresで1.65きたがいい`, 'color:red')
-            }
-            if (['gdax', 'bitfinex', 'bitstamp', 'okex'].includes(trade.exchange)) {
+            if (['gdax', 'bitstamp', 'okex'].includes(trade.exchange)) {
               // reasons.push({ reason: '取引所がいい', code: '', span: 100, sameLength: null })
               console.log(`%c取引所がいい`, 'color:red')
-              positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'etc_exchange', close: Math.round(priceSet.close) })
-              oneSetData(trade, data, priceSet, speeds, 'etc_exchange')
+              // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'etc_exchange', close: Math.round(priceSet.close) })
+              // oneSetData(trade, data, priceSet, speeds, 'etc_exchange', true)
+              positions = setPosition(positions, [trade], data, priceSet, speeds, 'etc_exchange', 1, true)
             }
           }
           return reasons
@@ -301,7 +316,7 @@ export default {
           const diffNum = Math.round(priceSet.close - priceSet.open)
           const data = attention.data
           const isPlus = diffNum > 0 ? true : false
-          // positions = setPositions(positions, { timestamp: data[0].timestamp, sheet: 'test', close: Math.round(priceSet.close) })
+
           console.log(positions)
           let amount = 0
           if (data.length >= 4) {
@@ -320,7 +335,7 @@ export default {
             amount += _trade.price * _trade.size
           }
           const reasons = isGoodTrade(data, priceSet)
-          const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
+          const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60), getAvarageSpeed(90), getAvarageSpeed(180)]
           if (binance.length === 2 && data.length === 2) {
             console.log(`%cダブルバイナンス`, 'color:red')
             // positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'test', close: Math.round(priceSet.close) })
@@ -332,17 +347,21 @@ export default {
             // reasons.push({ reason: 'テスト用ダブバイナンス', code: 'binance', span: 100, side: 'buy', sameLength: null })
 
             // twoSetData(binance, data, priceSet, speeds, 'test')
+            positions = setPosition(positions, binance, data, priceSet, speeds, 'test', 2)
           } else if (bybit.length === 2 && data.length === 2) {
             // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
-            positions = setPositions(positions, { timestamp: bybit[0].timestamp, sheet: 'wbybit', close: Math.round(priceSet.close) })
-            console.log(`%cダブルbybit`, 'color:red')
+            // positions = setPositions(positions, { timestamp: bybit[0].timestamp, sheet: 'wbybit', close: Math.round(priceSet.close) })
+            // twoSetData(bybit, data, priceSet, speeds, 'wbybit')
 
-            twoSetData(bybit, data, priceSet, speeds, 'wbybit')
+            positions = setPosition(positions, bybit, data, priceSet, speeds, 'wbybit', 2)
+            console.log(`%cダブルbybit`, 'color:red')
           } else if (data.length === 2) {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%cダブル指標`, 'color:red')
-            positions = setPositions(positions, { timestamp: data[0].timestamp, sheet: 'windex', close: Math.round(priceSet.close) })
-            twoSetData(data, data, priceSet, speeds, 'windex')
+            // positions = setPositions(positions, { timestamp: data[0].timestamp, sheet: 'windex', close: Math.round(priceSet.close) })
+            // twoSetData(data, data, priceSet, speeds, 'windex', true)
+
+            positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
           }
 
           if (deribit > 0 && data.length > 1) {
@@ -366,9 +385,12 @@ export default {
             if (isGood) {
               const allBitmex = data.filter(t => t.exchange === 'bitmex')
               const latestBitmex = allBitmex[allBitmex.length - 1]
-              const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
-              oneSetData(latestBitmex, data, priceSet, speeds, 'bitmex_gyaku')
-              positions = setPositions(positions, { timestamp: latestBitmex.timestamp, sheet: 'bitmex_gyaku', close: Math.round(priceSet.close) })
+
+              // oneSetData(latestBitmex, data, priceSet, speeds, 'bitmex_gyaku')
+              // positions = setPositions(positions, { timestamp: latestBitmex.timestamp, sheet: 'bitmex_gyaku', close: Math.round(priceSet.close) })
+
+              positions = setPosition(positions, [latestBitmex], data, priceSet, speeds, 'bitmex_gyaku', 1)
+
               reasons.push({ reason: 'bitmex逆張り正指標説', code: 'bitmexCon', span: 200, sameLength: 10, side: latestBitmex.side })
               console.log('bitmex逆張り正指標説 side: ', latestBitmex.side, '最新時間: ', latestBitmex.timestamp)
             } else {
@@ -377,17 +399,19 @@ export default {
               // そのうち１つでも2M以上ならOK正指標としてOK
               const existsHugeAmountAlly = allNotBitmexAndBinance.some(trade => trade.price * trade.size >= 2_000_000)
               if (existsHugeAmountAlly) {
-                positions = setPositions(positions, {
-                  timestamp: allNotBitmexAndBinance[0].timestamp,
-                  sheet: 'test',
-                  close: Math.round(priceSet.close)
-                })
-                oneSetData(allNotBitmexAndBinance[0], data, priceSet, speeds, 'kouho')
-                positions = setPositions(positions, {
-                  timestamp: allNotBitmexAndBinance[0].timestamp,
-                  sheet: 'kouho',
-                  close: Math.round(priceSet.close)
-                })
+                positions = setPosition(positions, allNotBitmexAndBinance, data, priceSet, speeds, 'kouho', 1)
+                // positions = setPositions(positions, {
+                //   timestamp: allNotBitmexAndBinance[0].timestamp,
+                //   sheet: 'test',
+                //   close: Math.round(priceSet.close)
+                // })
+                // oneSetData(allNotBitmexAndBinance[0], data, priceSet, speeds, 'kouho')
+
+                // positions = setPositions(positions, {
+                //   timestamp: allNotBitmexAndBinance[0].timestamp,
+                //   sheet: 'kouho',
+                //   close: Math.round(priceSet.close)
+                // })
                 console.log(`%cbitmexかついい感じに大きな取引を伴っている`, 'color:red')
               } else {
                 console.log(`%cbitmex他取引所指標チェック`, 'color:red')
@@ -401,9 +425,11 @@ export default {
             const total = allBinance.reduce((acc, trade) => acc + trade.price * trade.size)
             if (!isSameSide) {
               // reasons.push({ reason: 'binance正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
-              positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'mujun_binance', close: Math.round(priceSet.close) })
-              const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60)]
-              twoSetData(binance, data, priceSet, speeds, 'mujun_binance')
+
+              // positions = setPositions(positions, { timestamp: binance[0].timestamp, sheet: 'mujun_binance', close: Math.round(priceSet.close) })
+
+              positions = setPosition(positions, binance, data, priceSet, speeds, 'mujun_binance', 2)
+              // twoSetData(binance, data, priceSet, speeds, 'mujun_binance')
               console.log(`%c矛盾Binanceチェック`, 'color:red')
               if (total > 0) {
                 console.log(`%c矛盾Binance落下予測`, 'color:red')
@@ -415,8 +441,9 @@ export default {
             const allBybit = data.filter(t => t.exchange === 'bybit')
             const isSameSide = allBybit.every(t => data[0].side === t.side)
             if (isSameSide) {
-              twoSetData(allBybit, data, priceSet, speeds, '3bybit')
-              positions = setPositions(positions, { timestamp: allBybit[0].timestamp, sheet: '3bybit', close: Math.round(priceSet.close) })
+              positions = setPosition(positions, allBybit, data, priceSet, speeds, '3bybit', 2)
+              // twoSetData(allBybit, data, priceSet, speeds, '3bybit')
+              // positions = setPositions(positions, { timestamp: allBybit[0].timestamp, sheet: '3bybit', close: Math.round(priceSet.close) })
               // reasons.push({ reason: 'bybit三連以上は正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
             }
           }
@@ -483,11 +510,14 @@ export default {
         }
 
         // chatController, store経由で登録して始値、終値データを取得してexecuteCheckoutに渡している
-        const filtered1 = this.$store.state.app.newPrices.find(v => v.timestamp === attention.period - 10)
-        const filtered2 = this.$store.state.app.newPrices.find(v => v.timestamp === attention.period)
-        const threeOpen = getNoldPriceRange(this.$store.state.app.newPrices, attention.period, 3)
+        const newPrices = this.$store.state.app.newPrices
+
+        const filtered1 = newPrices.find(v => v.timestamp === attention.period - 10)
+        const filtered2 = newPrices.find(v => v.timestamp === attention.period)
+        const threeOpen = getNoldPriceRange(newPrices, attention.period, 3)
+        const oldPrices = [getNMinutesOldPrice(newPrices, 5), getNMinutesOldPrice(newPrices, 10), getNMinutesOldPrice(newPrices, 30)]
         if (attention.period != null && baseTimestamp !== attention.period && filtered1 && filtered2) {
-          const priceSet = { open: filtered1.price, close: filtered2.price, threeOpen }
+          const priceSet = { open: filtered1.price, close: filtered2.price, threeOpen, oldPrices }
           await executeCheckout(priceSet)
 
           attention.period = null
@@ -673,6 +703,14 @@ export default {
           const diffTime = Date.now() - startTime
           const passHours = Math.floor(diffTime / (60 * 60 * 1000))
           console.log(`経過時間: ${passHours}`)
+
+          // ストアに保存する
+          this.$store.commit('app/SET_SPEEDS', speedSamples)
+
+          // リロードチェック
+          if (passHours >= 4 && positions.length === 0) {
+            location.reload()
+          }
         }
         const amount_base = document.createElement('span')
         amount_base.className = 'trade__amount__base'

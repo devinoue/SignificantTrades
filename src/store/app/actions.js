@@ -5,6 +5,9 @@ export default {
   setNewPrice({ commit }, payload) {
     commit('SET_NEW_PRICE', payload.price)
   },
+  setSavedSpeeds({ commit }, payload) {
+    commit('SET_SPEEDS', payload.speeds)
+  },
   refreshExchange({ commit }, exchange) {
     const active =
       !this.state.settings.exchanges[exchange] ||
