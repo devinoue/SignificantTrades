@@ -201,13 +201,14 @@ export default {
         this.$store.state.app.newPrices.slice(-1)[0]?.price ?? 0,
         this.$store.state.app.newPrices.slice(-1)[0]?.timestamp ?? 0
       )
+      // トレードスピードのチェック
+      maintainTradeSpeedSamples(trades)
       // console.log(this.$store.state.app.newPrices.slice(-1)[0].price)
       for (let i = 0; i < trades.length; i++) {
         if (activeExchanges.indexOf(trades[i].exchange) === -1) {
           continue
         }
-        // トレードスピードのチェック
-        maintainTradeSpeedSamples(trades)
+
         // tradeを入れるといいか悪いか判断する。遠くに置きたくないのでここに置く
         const isGoodTrade = (data, priceSet) => {
           const reasons = []
@@ -288,7 +289,7 @@ export default {
             if (trade.exchange === 'binance') {
               // 使う
               console.log(`%c取引所binance`, 'color:red')
-              reasons.push({ reason: '取引所binance', code: 'binance', span: 150, sameLength: 10 })
+
               // positions = setPositions(positions, { timestamp: trade.timestamp, sheet: 'bitfinex', close: Math.round(priceSet.close) })
               // oneSetData(trade, data, priceSet, speeds, 'bitfinex')
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'binance', 1)
