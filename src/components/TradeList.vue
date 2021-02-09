@@ -663,7 +663,7 @@ export default {
           this.$store.commit('app/SET_SPEEDS', speedSamples)
 
           // リロードチェック
-          if (passHours >= 24 && positions.length === 0) {
+          if (passHours >= 6 && positions.length === 0) {
             location.reload()
           }
         }
