@@ -332,6 +332,13 @@ export default {
 
             positions = setPosition(positions, bybit, data, priceSet, speeds, 'wbybit', 2)
             console.log(`%cダブルbybit`, 'color:red')
+          } else if (data.length === 2 && data[0].exchange === 'binance_futures' && data[1].exchange === 'bitmex') {
+            console.log(`%cbinance and bitmex`, 'color:red')
+            positions = setPosition(positions, data, data, priceSet, speeds, 'bi_bitmex', 2)
+          } else if (data.length === 2 && (data[0].exchange === 'binance' || data[1].exchange === 'binance')) {
+            // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
+            console.log(`%c片方が少なくともバイナンス`, 'color:red')
+            positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
           } else if (data.length === 2) {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%cダブル指標`, 'color:red')
