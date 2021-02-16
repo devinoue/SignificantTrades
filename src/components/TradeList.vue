@@ -318,6 +318,9 @@ export default {
           }
           const reasons = isGoodTrade(data, priceSet)
           const speeds = [getAvarageSpeed(6), getAvarageSpeed(30), getAvarageSpeed(60), getAvarageSpeed(90), getAvarageSpeed(180)]
+          const isAllBuy = data.every(t => t.side === 'buy')
+          const isAllSell = data.every(t => t.side === 'sell')
+          const isAllSameSide = isAllBuy || isAllSell
           if (binance.length === 2 && data.length === 2 && getAvarageSpeed(6) > 240) {
             console.log(`%cダブルバイナンス`, 'color:red')
 
@@ -343,6 +346,9 @@ export default {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%cダブル指標`, 'color:red')
             positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
+          } else if (data.length > 4 && isAllSameSide) {
+            console.log(`%c4つ以上指標`, 'color:red')
+            positions = setPosition(positions, data, data, priceSet, speeds, 'over4', 2)
           }
 
           if (deribit > 0 && data.length > 1) {
