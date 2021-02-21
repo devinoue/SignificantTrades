@@ -351,11 +351,11 @@ export default {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%c片方が少なくともバイナンス`, 'color:red')
             positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
-            // } else if (data.length === 2) {
-            //   // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
-            //   console.log(`%cダブル指標`, 'color:red')
-            //   positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
-          } else if (data.length > 1 && isAllSameSide) {
+          } else if (data.length === 2) {
+            // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
+            console.log(`%cダブル指標`, 'color:red')
+            positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
+          } else if (data.length > 4 && isAllSameSide) {
             console.log(`%c4つ以上指標`, 'color:red')
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'over4')
           }
