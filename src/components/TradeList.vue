@@ -10,12 +10,20 @@ import { mapState } from 'vuex'
 
 import { ago, formatPrice, formatAmount } from '../utils/helpers'
 import { getColorByWeight, getColorLuminance, getAppBackgroundColor, splitRgba, getLogShade } from '../utils/colors'
-import { getNMinutesOldPrice, getNoldPriceRange } from '../utils/priceHelper'
+import {
+  getNMinutesOldPrice,
+  getNOldAmountAverageByMin,
+  getNOldAmountByMin,
+  getNOldAmountByN,
+  getNOldAmountMaxByMin,
+  getNOldAmountMedianByMin,
+  getNoldPriceRange
+} from '../utils/priceHelper'
 import { awsApiUrl, gasApiUrl } from '../../env'
 import socket from '../services/socket'
 import Sfx from '../services/sfx'
 import axios from 'axios'
-import { checkPosition } from '../utils/checkPosition'
+import { checkPosition, setPositionForOverLevel } from '../utils/checkPosition'
 
 let LAST_TRADE_TIMESTAMP // to control whether we show timestamp on trade or not
 let LAST_SIDE // to control wheter we show "up" or "down" icon in front of trade
@@ -216,6 +224,7 @@ export default {
             const bigAmount = 6_000_000
             const littleBigAmount = 4_000_000
             const littleLittleAmount = 3_000_000
+
             let isKouho = false
             if (formatAmount(trade.price * trade.size) === '10M' && trade.exchange === 'bitmex' && trade.side === 'buy') {
               // 使う
@@ -342,13 +351,13 @@ export default {
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%c片方が少なくともバイナンス`, 'color:red')
             positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
-          } else if (data.length === 2) {
-            // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
-            console.log(`%cダブル指標`, 'color:red')
-            positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
-          } else if (data.length > 4 && isAllSameSide) {
+            // } else if (data.length === 2) {
+            //   // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
+            //   console.log(`%cダブル指標`, 'color:red')
+            //   positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
+          } else if (data.length > 1 && isAllSameSide) {
             console.log(`%c4つ以上指標`, 'color:red')
-            positions = setPosition(positions, data, data, priceSet, speeds, 'over4', 2)
+            positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'over4')
           }
 
           if (deribit > 0 && data.length > 1) {
@@ -480,13 +489,32 @@ export default {
 
         // chatController, store経由で登録して始値、終値データを取得してexecuteCheckoutに渡している
         const newPrices = this.$store.state.app.newPrices
+        const amount2 = this.$store.state.app.amount2
 
         const filtered1 = newPrices.find(v => v.timestamp === attention.period - 10)
         const filtered2 = newPrices.find(v => v.timestamp === attention.period)
         const threeOpen = getNoldPriceRange(newPrices, attention.period, 3)
         const oldPrices = [getNMinutesOldPrice(newPrices, 5), getNMinutesOldPrice(newPrices, 10), getNMinutesOldPrice(newPrices, 30)]
         if (attention.period != null && baseTimestamp !== attention.period && filtered1 && filtered2) {
-          const priceSet = { open: filtered1.price, close: filtered2.price, threeOpen, oldPrices }
+          const oldAmounts = [
+            getNOldAmountByN(amount2, attention.period, 0),
+            getNOldAmountByN(amount2, attention.period, 1),
+            getNOldAmountByN(amount2, attention.period, 2),
+            getNOldAmountByN(amount2, attention.period, 3),
+            getNOldAmountByN(amount2, attention.period, 4),
+            getNOldAmountByN(amount2, attention.period, 5),
+            getNOldAmountMedianByMin(amount2, attention.period, 1),
+            getNOldAmountMedianByMin(amount2, attention.period, 5),
+            getNOldAmountMedianByMin(amount2, attention.period, 10),
+            getNOldAmountMedianByMin(amount2, attention.period, 15),
+            getNOldAmountMedianByMin(amount2, attention.period, 30),
+            getNOldAmountMaxByMin(amount2, attention.period, 1),
+            getNOldAmountMaxByMin(amount2, attention.period, 5),
+            getNOldAmountMaxByMin(amount2, attention.period, 10),
+            getNOldAmountMaxByMin(amount2, attention.period, 30)
+          ]
+
+          const priceSet = { open: filtered1.price, close: filtered2.price, threeOpen, oldPrices, oldAmounts }
           await executeCheckout(priceSet)
 
           attention.period = null

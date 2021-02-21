@@ -1,5 +1,17 @@
 import axios from 'axios'
 import { gasApiUrl } from '../../env'
+
+function simpleFormatAmount(amount, decimals) {
+  const negative = amount < 0
+  amount = Math.ceil(Math.abs(amount) * 1000000000) / 1000000000
+  amount = +(amount / 1000000).toFixed(isNaN(decimals) ? 1 : decimals)
+  if (negative) {
+    return '-' + amount
+  } else {
+    return amount
+  }
+}
+
 export function getNoldPriceRange(prices, targetPeriod, num) {
   // n個前のデータの始値を抽出する。
   const prevOpen = prices.find(v => v.timestamp === targetPeriod - (num + 1) * 10)
@@ -13,6 +25,77 @@ export function getNMinutesOldPrice(prices, min) {
   const num = min * 6
   const value = prices.slice(-1 * num, -1 * (num - 1))
   return value.length === 0 ? 0 : value[0].price
+}
+
+export function getNOldAmountByMin(amounts, basetime, min) {
+  // minには分が入るため調整
+  const num = min * 60
+
+  const filtered = amounts.find(v => v.timestamp === basetime - num)
+  return !filtered ? 0 : simpleFormatAmount(filtered.amount, 2)
+}
+
+export function getNOldAmountByN(amounts, basetime, n) {
+  // 最新の場合はn=0、3つ前ならn=3
+  const num = n * 10
+
+  const filtered = amounts.find(v => v.timestamp === basetime - num)
+  return !filtered ? 0 : simpleFormatAmount(filtered.amount, 2)
+}
+
+function getAverage(arr) {
+  const res =
+    arr.reduce((pre, curr, i) => {
+      return pre + curr
+    }, 0) / arr.length
+  return res
+}
+
+// 過去n分の最大値と、平均値を出す
+export function getNOldAmountAverageByMin(amounts, basetime, min) {
+  const num = min * 60
+
+  const filtered = amounts.filter(v => v.timestamp > basetime - num)
+  if (filtered.length === 0) return 0
+  // 予想通りの数が取れていない場合0を返す
+  const amountArray = filtered.map(v => v.amount)
+
+  if (amountArray.length < min * 6) {
+    return 0
+  }
+
+  //平均値を返す
+  return simpleFormatAmount(getAverage(amountArray), 2)
+}
+
+export function getNOldAmountMedianByMin(amounts, basetime, min) {
+  const num = min * 60
+
+  const filtered = amounts.filter(v => v.timestamp > basetime - num)
+  // 予想通りの数が取れていない場合0を返す
+  const amountArray = filtered.map(v => v.amount)
+
+  if (amountArray.length < min * 6) {
+    return 0
+  }
+
+  amountArray.sort((a, b) => a - b)
+  const median = (amountArray[(amountArray.length - 1) >> 1] + amountArray[amountArray.length >> 1]) / 2
+  return simpleFormatAmount(median, 2)
+}
+
+export function getNOldAmountMaxByMin(amounts, basetime, min) {
+  const num = min * 60
+
+  const filtered = amounts.filter(v => v.timestamp > basetime - num)
+  // 予想通りの数が取れていない場合0を返す
+  const amountArray = filtered.map(v => v.amount)
+
+  if (amountArray.length < min * 6) {
+    return 0
+  }
+
+  return simpleFormatAmount(Math.max(...amountArray), 2)
 }
 
 // function simpleFormatAmount(amount, decimals) {

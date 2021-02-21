@@ -16,5 +16,6 @@ export default {
   prevPrice: 0,
   newPrices: [],
   precPrices: [],
-  savedSpeeds: []
+  savedSpeeds: [],
+  amount2: []
 }

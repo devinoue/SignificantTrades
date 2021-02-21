@@ -61,6 +61,9 @@ export default {
   SET_SPEEDS(state, value) {
     state.savedSpeeds = value
   },
+  SET_AMOUNT2(state, value) {
+    state.amount2 = value
+  },
   SET_API_SUPPORTED_PAIRS(state, value) {
     if (!value) {
       state.apiSupportedPairs = []

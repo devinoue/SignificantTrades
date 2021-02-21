@@ -1275,6 +1275,13 @@ export default class ChartController {
       if (newPrices.length > 240) newPrices.unshift()
       newPrices.push({ timestamp: renderer.timestamp, price: renderer.series['price'].value })
       store.commit('app/SET_PRICES', newPrices)
+
+      // 新しい売買高保存ルート
+      const amount2 = store.state.app.amount2
+      if (amount2.length > 240) amount2.unshift()
+      amount2.push({ timestamp: renderer.timestamp, amount: renderer.series[this.activeSeries[this.activeSeries.length - 2].id].value })
+      store.commit('app/SET_AMOUNT2', amount2)
+
       // store.commit('app/SET_NEW_PRICE', renderer.series['price'].value)
       // console.log(store.app.getters)
       // storeに登録

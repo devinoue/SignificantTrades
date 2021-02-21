@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { gasApiUrl } from '../../env'
+import { gasApiUrl, testMode } from '../../env'
 
 function simpleFormatAmount(amount, decimals) {
   const negative = amount < 0
@@ -22,6 +22,81 @@ export function formatDataByRawData(data) {
   }
 
   return fullText
+}
+
+const exchanges = ['binance_futures', 'bybit', 'bitmex', 'binance', 'deribit', 'huobi', 'bitfinex', 'bitstamp', 'gdax']
+const formatBigAmountData = data => {
+  // リセットする
+  const tmpData = {}
+  for (let e of exchanges) {
+    tmpData[e] = { num: 0, amount: 0 }
+  }
+
+  // まとめる
+  for (let trade of data) {
+    if (tmpData[trade.exchange]) {
+      tmpData[trade.exchange].num++
+      const amount = trade.side === 'buy' ? simpleFormatAmount(trade.price * trade.size, 3) : simpleFormatAmount(trade.price * trade.size, 3) * -1
+      tmpData[trade.exchange].amount += Number(amount)
+    }
+  }
+
+  // 整形
+  const tmpNum = exchanges.map(exchange => tmpData[exchange].num)
+  const tmpAmounts = exchanges.map(exchange => tmpData[exchange].amount)
+  const formattedDataByExchange = [...tmpNum, ...tmpAmounts]
+
+  return formattedDataByExchange
+}
+
+const totalAmount = data => {
+  let total = 0
+  for (let trade of data) {
+    total += simpleFormatAmount(trade.price * trade.size, 3)
+  }
+  return Number(total)
+}
+export const setPositionForOverLevel = (positions, data, priceSet, speeds, sheet) => {
+  // 生データとして保存
+  const rawData = formatDataByRawData(data)
+
+  // スプレッドシートに入れるデータ
+  const total = data[0].side === 'buy' ? totalAmount(data) : totalAmount(data) * -1
+
+  const mainData = [
+    new Date(data[0].timestamp).toUTCString(),
+    data[0].timestamp,
+    Math.round(priceSet.open),
+    Math.round(priceSet.close),
+    Math.round(priceSet.threeOpen),
+    Math.round(priceSet.oldPrices[0]),
+    Math.round(priceSet.oldPrices[1]),
+    Math.round(priceSet.oldPrices[2]),
+    total,
+    ...priceSet.oldAmounts,
+    speeds[0],
+    speeds[1],
+    speeds[2],
+    speeds[3],
+    speeds[4],
+    ...formatBigAmountData(data),
+    rawData
+  ]
+  // 後で追加で入れるデータ
+  const additionalData = {
+    result50: '', // 上昇か下降か
+    result50Time: 0, // 時間
+    result70: '',
+    result70Time: 0 //
+  }
+
+  positions.push({
+    close: Math.round(priceSet.close),
+    sheet,
+    additionalData,
+    mainData
+  })
+  return positions
 }
 
 export const setPosition = (positions, trades, data, priceSet, speeds, sheet, numOfValue, saveExchange = false) => {
@@ -55,6 +130,7 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
       Math.round(priceSet.oldPrices[1]),
       Math.round(priceSet.oldPrices[2]),
       amount1,
+      ...priceSet.oldAmounts,
       trades[0].exchange,
       speeds[0],
       speeds[1],
@@ -76,6 +152,7 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
       Math.round(priceSet.oldPrices[1]),
       Math.round(priceSet.oldPrices[2]),
       amount1,
+      ...priceSet.oldAmounts,
       speeds[0],
       speeds[1],
       speeds[2],
@@ -98,6 +175,7 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
       Math.round(priceSet.oldPrices[2]),
       amount1,
       amount2,
+      ...priceSet.oldAmounts,
       trades[0].exchange,
       trades[1].exchange,
       speeds[0],
@@ -122,6 +200,7 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
       Math.round(priceSet.oldPrices[2]),
       amount1,
       amount2,
+      ...priceSet.oldAmounts,
       speeds[0],
       speeds[1],
       speeds[2],
@@ -130,10 +209,18 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
       rawData
     ]
   }
+  // 後で追加で入れるデータ
+  const additionalData = {
+    result50: '', // 上昇か下降か
+    result50Time: 0, // 時間
+    result70: '',
+    result70Time: 0 //
+  }
 
   positions.push({
     close: Math.round(priceSet.close),
     sheet,
+    additionalData,
     mainData
   })
   return positions
@@ -153,23 +240,16 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
   return positions.filter(value => {
     const mainData = value.mainData
 
-    if (value.close + 100 < price) {
+    if (value.close + 100 < price && !testMode) {
       //100を超えたと送信
       const direction = '上昇'
       console.log(`100ドル超えたよ！`)
 
-      mainData.push(direction)
-      mainData.push(Math.round(price))
-      mainData.push(timestamp * 1000)
-      const postData = {
-        sheet: value.sheet,
-        data: mainData
-      }
-      axios.post(gasApiUrl, postData)
-    } else if (value.close - 100 > price) {
-      // 100ドルより下回ったと送信
-      const direction = '下降'
-      console.log(`100ドル下回った！`)
+      // 追加分を付け加える
+      mainData.push(value.additionalData.result50)
+      mainData.push(value.additionalData.result50Time)
+      mainData.push(value.additionalData.result70)
+      mainData.push(value.additionalData.result70Time)
 
       mainData.push(direction)
       mainData.push(Math.round(price))
@@ -179,6 +259,44 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         data: mainData
       }
       axios.post(gasApiUrl, postData)
+    } else if (value.close - 100 > price && !testMode) {
+      // 100ドルより下回ったと送信
+      const direction = '下降'
+      console.log(`100ドル下回った！`)
+      // 追加分を付け加える
+      mainData.push(value.additionalData.result50)
+      mainData.push(value.additionalData.result50Time)
+      mainData.push(value.additionalData.result70)
+      mainData.push(value.additionalData.result70Time)
+
+      mainData.push(direction)
+      mainData.push(Math.round(price))
+      mainData.push(timestamp * 1000)
+      const postData = {
+        sheet: value.sheet,
+        data: mainData
+      }
+      axios.post(gasApiUrl, postData)
+    } else if (value.close + 70 < price && value.additionalData.result70Time === 0) {
+      // 70ドルだけ上昇した場合
+      value.additionalData.result70Time = timestamp * 1000
+      value.additionalData.result70 = '上昇'
+      return value
+    } else if (value.close + 50 < price && value.additionalData.result50Time === 0) {
+      // 50ドルだけ上昇した場合
+      value.additionalData.result50Time = timestamp * 1000
+      value.additionalData.result50 = '上昇'
+      return value
+    } else if (value.close - 70 > price && value.additionalData.result70Time === 0) {
+      // 70ドルだけ降下した場合
+      value.additionalData.result70Time = timestamp * 1000
+      value.additionalData.result70 = '下降'
+      return value
+    } else if (value.close - 50 > price && value.additionalData.result50Time === 0) {
+      // 50ドルだけ降下した場合
+      value.additionalData.result50Time = timestamp * 1000
+      value.additionalData.result50 = '下降'
+      return value
     } else {
       return value
     }
