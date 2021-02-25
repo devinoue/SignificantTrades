@@ -272,13 +272,13 @@ export default {
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'huobi', 1)
             }
 
-            if (trade.exchange === 'bitfinex') {
-              // 使う
-              console.log(`%c取引所bitfinex`, 'color:red')
-              // reasons.push({ reason: '取引所bitfinex', code: 'bitfinex', span: 150, sameLength: 10 })
+            // if (trade.exchange === 'bitfinex') {
+            //   // 使う
+            //   console.log(`%c取引所bitfinex`, 'color:red')
+            //   // reasons.push({ reason: '取引所bitfinex', code: 'bitfinex', span: 150, sameLength: 10 })
 
-              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bitfinex', 1)
-            }
+            //   positions = setPosition(positions, [trade], data, priceSet, speeds, 'bitfinex', 1)
+            // }
             // 気になる
             if (trade.exchange === 'binance') {
               // 使う
@@ -317,8 +317,10 @@ export default {
           let bitmex = 0
           let bybit = []
           let deribit = 0
+          let bitfinex = 0
 
           for (let _trade of data) {
+            if (_trade.exchange === 'bitfinex') bitfinex++
             if (_trade.exchange === 'binance_futures') binance.push(_trade)
             if (_trade.exchange === 'bitmex') bitmex++
             if (_trade.exchange === 'bybit') bybit.push(_trade)
@@ -332,12 +334,6 @@ export default {
           const isAllSameSide = isAllBuy || isAllSell
           if (binance.length === 2 && data.length === 2 && getAvarageSpeed(6) > 240) {
             console.log(`%cダブルバイナンス`, 'color:red')
-
-            console.log(
-              `${Math.round(priceSet.close)} からダブルバイナンススタート${Math.round(priceSet.close) + 100}か、${Math.round(priceSet.close) -
-                100}で終わり`
-            )
-
             positions = setPosition(positions, binance, data, priceSet, speeds, '50k_binance', 2)
           } else if (bybit.length === 2 && data.length === 2) {
             // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
@@ -358,6 +354,11 @@ export default {
           } else if (data.length > 4 && isAllSameSide) {
             console.log(`%c4つ以上指標`, 'color:red')
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'over4')
+          }
+
+          if (bitfinex > 0 && isAllSameSide) {
+            console.log(`%cbitfinex指標`, 'color:red')
+            positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'bitfinex')
           }
 
           if (deribit > 0 && data.length > 1) {
