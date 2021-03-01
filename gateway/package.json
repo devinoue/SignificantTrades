@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "dev": "nodemon src/index"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "ccxt": "^1.42.20",
+    "dayjs": "^1.10.4",
+    "express": "^4.17.1"
+  }
+}
