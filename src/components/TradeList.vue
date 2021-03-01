@@ -24,6 +24,7 @@ import socket from '../services/socket'
 import Sfx from '../services/sfx'
 import axios from 'axios'
 import { checkPosition, setPositionForOverLevel } from '../utils/checkPosition'
+import { just3A } from '../utils/strategy'
 
 let LAST_TRADE_TIMESTAMP // to control whether we show timestamp on trade or not
 let LAST_SIDE // to control wheter we show "up" or "down" icon in front of trade
@@ -308,7 +309,7 @@ export default {
           const data = attention.data
           const isPlus = diffNum > 0 ? true : false
 
-          console.log(positions)
+          // console.log(positions)
           let amount = 0
           if (data.length >= 4) {
             console.log(`%c4つ以上ある！`, 'color:red')
@@ -335,8 +336,11 @@ export default {
           const isAllBuy = data.every(t => t.side === 'buy')
           const isAllSell = data.every(t => t.side === 'sell')
           const isAllSameSide = isAllBuy || isAllSell
-          if (binance.length === 2 && data.length === 2 && getAvarageSpeed(6) > 240) {
-            // console.log(`%cダブルバイナンス`, 'color:red')
+
+          just3A('just3', data, priceSet, speeds)
+          if (binance.length === 2 && data.length === 2) {
+            console.log(`%cダブルバイナンス`, 'color:red')
+            just3A('just3', data, priceSet, speeds)
             // positions = setPosition(positions, binance, data, priceSet, speeds, '50k_binance', 2)
           } else if (bybit.length === 2 && data.length === 2) {
             // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
@@ -362,6 +366,8 @@ export default {
           if (isAllSameSide && data.length === 3 && !isAllSameExchange) {
             console.log(`%c3つ指標`, 'color:red')
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'just3')
+            // 購入
+            just3A('just3', data, priceSet, speeds)
           }
           // 同じ方向の4つの取引&&少なくとも取引所は2つ以上
           if (isAllSameSide && data.length === 4 && !isAllSameExchange) {

@@ -1,7 +1,18 @@
 import axios from 'axios'
-import { gasApiUrl, testMode } from '../../env'
+import { awsApiUrl, gasApiUrl, testMode } from '../../env'
 
-function simpleFormatAmount(amount, decimals) {
+export function orderPosition(strategy, type, id, side = '') {
+  const data = {
+    strategy,
+    type,
+    side,
+    id
+  }
+  console.log('送信する')
+  axios.post('http://localhost:3001/order', data)
+}
+
+export function simpleFormatAmount(amount, decimals) {
   const negative = amount < 0
   amount = Math.ceil(Math.abs(amount) * 1000000000) / 1000000000
   amount = +(amount / 1000000).toFixed(isNaN(decimals) ? 1 : decimals)
@@ -102,7 +113,7 @@ export const setPositionForOverLevel = (positions, data, priceSet, speeds, sheet
 export const setPosition = (positions, trades, data, priceSet, speeds, sheet, numOfValue, saveExchange = false) => {
   // 生データとして保存
   const rawData = formatDataByRawData(data)
-
+  const id = trades[0].timestamp
   // スプレッドシートに入れるデータ
   const amount1 =
     trades[0].side === 'buy'
@@ -221,7 +232,8 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
     close: Math.round(priceSet.close),
     sheet,
     additionalData,
-    mainData
+    mainData,
+    id
   })
   return positions
 }
@@ -258,6 +270,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
+      orderPosition(value.sheet, 'pay', value.id)
       axios.post(gasApiUrl, postData)
     } else if (value.close - 100 > price && !testMode) {
       // 100ドルより下回ったと送信
@@ -276,6 +289,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
+      orderPosition(value.sheet, 'pay', value.id)
       axios.post(gasApiUrl, postData)
     } else if (value.close + 70 < price && value.additionalData.result70Time === 0) {
       // 70ドルだけ上昇した場合
