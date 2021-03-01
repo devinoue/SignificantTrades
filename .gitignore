@@ -22,3 +22,5 @@ yarn-error.log*
 
 env.js
 /data
+/gateway/env.js
+/gateway/test.js
