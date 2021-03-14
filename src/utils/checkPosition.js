@@ -2,6 +2,7 @@ import axios from 'axios'
 import { awsApiUrl, gasApiUrl, testMode } from '../../env'
 
 export function orderPosition(strategy, type, id, side = '') {
+  console.log(`orderPosition ID : ${id}`)
   const data = {
     strategy,
     type,

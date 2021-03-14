@@ -28,6 +28,7 @@ export function windexC(id, trades, data, priceSet, speeds) {
   console.log('windexc入った')
   const { amount0, amount1, speed1, sei } = formatReadability(data[0].timestamp, trades, data, priceSet, speeds)
   if (amount0 < amount1 * 4.3 && amount0 < 24 && speed1 > 430) {
+    console.log(`windex cの条件に合致: ID ${id}`)
     orderPosition('windex', 'new', id, sei)
   } else {
     console.log('条件に合わず保留')

@@ -287,6 +287,7 @@ export const checkCurrentPriceGateway = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
+      console.log(`100ドル超えたID : ${value.id}`)
       orderPosition(value.strategy, 'pay', value.id)
       if (!testMode) {
         axios.post(gasApiUrl, postData)
@@ -310,6 +311,7 @@ export const checkCurrentPriceGateway = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
+      console.log(`100ドル低下ID : ${value.id}`)
       orderPosition(value.strategy, 'pay', value.id)
       if (!testMode) {
         axios.post(gasApiUrl, postData)
