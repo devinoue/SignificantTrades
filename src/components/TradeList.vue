@@ -395,8 +395,8 @@ export default {
           if (isAllSameSide && data.length === 3 && !isAllSameExchange) {
             console.log(`%c3つ指標`, 'color:red')
             positionsGateway = setPositionForOverLevelGateway('just3', data[0].timestamp, just3B, positionsGateway, data, priceSet, speeds, 'just3')
-            // positionsGateway = setPositionGateway('just3', data[0].timestamp, just3B, positionsGateway, data, data, priceSet, speeds, 'just3', 2)
-            positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'just3')
+            // 不要になる予定
+            // positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'just3')
             // 購入
           }
           // 同じ方向の4つの取引&&少なくとも取引所は2つ以上

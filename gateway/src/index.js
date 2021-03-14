@@ -184,7 +184,7 @@ app.post('/order', async (req, res) => {
 })
 
 // 戦略の優先順は「数字が大きいほど」優先度が高い
-const strategyPriority = { test: 5, just3: 5, huobi: 4, windex: 6, etc_exchange: 2 }
+const strategyPriority = { test: 5, just3: 4, huobi: 4, windex: 6, etc_exchange: 2 }
 
 const isPriorityHigh = (position, data) => {
   if (!strategyPriority[position.strategy] || !strategyPriority[data.strategy]) return 0
