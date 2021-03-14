@@ -67,7 +67,19 @@ export const totalAmount = data => {
   }
   return Number(total)
 }
-export const setPositionForOverLevel = (positions, data, priceSet, speeds, sheet) => {
+export const setPositionForOverLevelGateway = (strategy, id, func, positions, data, priceSet, speeds, sheet) => {
+  try {
+    func(id, data, data, priceSet, speeds)
+  } catch (e) {
+    // 失敗時の処理
+    const postData = {
+      sheet: 'test',
+      data: [new Date(data[0].timestamp).toUTCString(), '失敗しました']
+    }
+    axios.post(gasApiUrl, postData)
+    return positions
+  }
+
   // 生データとして保存
   const rawData = formatDataByRawData(data)
 
@@ -105,23 +117,37 @@ export const setPositionForOverLevel = (positions, data, priceSet, speeds, sheet
     close: Math.round(priceSet.close),
     sheet,
     additionalData,
-    mainData
+    mainData,
+    id,
+    strategy
   })
   return positions
 }
 
-export const setPosition = (positions, trades, data, priceSet, speeds, sheet, numOfValue, saveExchange = false) => {
+export const setPositionGateway = (strategy, id, func, positions, trades, data, priceSet, speeds, sheet, numOfValue, saveExchange = false) => {
+  try {
+    func(id, trades, data, priceSet, speeds)
+  } catch (e) {
+    // 失敗時の処理
+    const postData = {
+      sheet: 'test',
+      data: [new Date(trades[0].timestamp).toUTCString(), '失敗しました']
+    }
+    axios.post(gasApiUrl, postData)
+    return positions
+  }
+
   // 生データとして保存
   const rawData = formatDataByRawData(data)
-  const id = trades[0].timestamp
+  // const id = trades[0].timestamp
   // スプレッドシートに入れるデータ
   const amount1 =
     trades[0].side === 'buy'
       ? `${simpleFormatAmount(trades[0].price * trades[0].size, 3)}`
       : `-${simpleFormatAmount(trades[0].price * trades[0].size, 3)}`
 
-  let amount2
-  if (numOfValue === 2) {
+  let amount2 = 0
+  if (numOfValue === 2 && trades.length > 1) {
     amount2 =
       trades[1].side === 'buy'
         ? `${simpleFormatAmount(trades[1].price * trades[1].size, 3)}`
@@ -233,26 +259,17 @@ export const setPosition = (positions, trades, data, priceSet, speeds, sheet, nu
     sheet,
     additionalData,
     mainData,
-    id
+    id,
+    strategy
   })
   return positions
 }
 
-// 削除予定(setPositionが動けば)
-export const setPositions = (positions, data) => {
-  const { close, sheet, timestamp } = data
-  positions.push({
-    close,
-    sheet,
-    timestamp
-  })
-  return positions
-}
-export const checkCurrentPrice = (positions, price, timestamp) => {
+export const checkCurrentPriceGateway = (positions, price, timestamp) => {
   return positions.filter(value => {
     const mainData = value.mainData
 
-    if (value.close + 100 < price && !testMode) {
+    if (value.close + 100 < price) {
       //100を超えたと送信
       const direction = '上昇'
       console.log(`100ドル超えたよ！`)
@@ -270,9 +287,13 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
-      orderPosition(value.sheet, 'pay', value.id)
-      axios.post(gasApiUrl, postData)
-    } else if (value.close - 100 > price && !testMode) {
+      orderPosition(value.strategy, 'pay', value.id)
+      if (!testMode) {
+        axios.post(gasApiUrl, postData)
+      } else {
+        console.log('テストモードのため、送信は完了しました')
+      }
+    } else if (value.close - 100 > price) {
       // 100ドルより下回ったと送信
       const direction = '下降'
       console.log(`100ドル下回った！`)
@@ -289,8 +310,12 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
-      orderPosition(value.sheet, 'pay', value.id)
-      axios.post(gasApiUrl, postData)
+      orderPosition(value.strategy, 'pay', value.id)
+      if (!testMode) {
+        axios.post(gasApiUrl, postData)
+      } else {
+        console.log('テストモードのため、送信は完了しました')
+      }
     } else if (value.close + 70 < price && value.additionalData.result70Time === 0) {
       // 70ドルだけ上昇した場合
       value.additionalData.result70Time = timestamp * 1000
@@ -320,8 +345,7 @@ export const checkPosition = () => {
   let positions = []
   return {
     positions,
-    // setPositions,
-    setPosition,
-    checkCurrentPrice
+    setPositionGateway,
+    checkCurrentPriceGateway
   }
 }

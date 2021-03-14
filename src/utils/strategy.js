@@ -1,70 +1,41 @@
-import { orderPosition, simpleFormatAmount } from './checkPosition'
+import { orderPosition } from './checkPosition'
+import { formatReadability } from './strategyHelper'
 
-const formatReadability = (ut, tmpAmounts, data, priceSet, speeds) => {
-  const side = data[0].side
-  const id = ut
-  const open = Math.round(priceSet.open)
-  const close = Math.round(priceSet.close)
-  const close3 = Math.round(priceSet.threeOpen)
-  const close5 = Math.round(priceSet.oldPrices[0])
-  const close10 = Math.round(priceSet.oldPrices[1])
-  const close30 = Math.round(priceSet.oldPrices[2])
-  const amounts = tmpAmounts
-  const speed1 = speeds[0]
-  const speed5 = speeds[1]
-  const speed10 = speeds[2]
-  const speed15 = speeds[3]
-  const speed30 = speeds[4]
+export function just3B(id, trades, data, priceSet, speeds) {
+  const { close, close3, total, amount0, sei, gyaku } = formatReadability(trades[0].timestamp, trades, data, priceSet, speeds)
 
-  const sei = side
-  const gyaku = side === 'buy' ? 'sell' : 'buy'
-  return {
-    id,
-    open,
-    close,
-    close3,
-    close5,
-    close10,
-    close30,
-    amounts,
-    speed1,
-    speed5,
-    speed10,
-    speed15,
-    speed30,
-    side,
-    sei,
-    gyaku
+  if (Math.abs((total / amount0) * Math.abs(close3 - close)) > 20.6) {
+    orderPosition('just3', 'new', id, sei)
+  } else {
+    orderPosition('just3', 'new', id, gyaku)
   }
 }
 
-export function just3A(strategy, data, priceSet, speeds) {
+export function just3A(id, trades, data, priceSet, speeds) {
   console.log('入った')
-  const amount =
-    data[0].side === 'buy' ? `${simpleFormatAmount(data[0].price * data[0].size, 3)}` : `-${simpleFormatAmount(data[0].price * data[0].size, 3)}`
-  const {
-    id,
-    open,
-    close,
-    close3,
-    close5,
-    close10,
-    close30,
-    amounts,
-    speed1,
-    speed5,
-    speed10,
-    speed15,
-    speed30,
-    side,
-    sei,
-    gyaku
-  } = formatReadability(data[0].timestamp, [amount], data, priceSet, speeds)
+
+  const { open, close, close5, speed5, speed10, sei, gyaku } = formatReadability(data[0].timestamp, trades, data, priceSet, speeds)
   if ((Math.abs(close5 - close) < 400 && Math.abs(close - open) < 170 && speed5 < 1000 && speed10 < 1000, speed5 > 200, speed10 > 200)) {
     if (speed5 > 340) {
-      orderPosition(strategy, 'new', id, sei)
+      orderPosition('just3', 'new', id, sei)
     } else {
-      orderPosition(strategy, 'new', id, gyaku)
+      orderPosition('just3', 'new', id, gyaku)
     }
   }
+}
+
+export function windexC(id, trades, data, priceSet, speeds) {
+  console.log('windexc入った')
+  const { amount0, amount1, speed1, sei } = formatReadability(data[0].timestamp, trades, data, priceSet, speeds)
+  if (amount0 < amount1 * 4.3 && amount0 < 24 && speed1 > 430) {
+    orderPosition('windex', 'new', id, sei)
+  } else {
+    console.log('条件に合わず保留')
+  }
+}
+
+export function testStrategy(id, trades, data, priceSet, speeds) {
+  console.log('テスト用戦略に入りました')
+  const { amount0, amount1, speed1, sei } = formatReadability(data[0].timestamp, trades, data, priceSet, speeds)
+  orderPosition('test', 'new', id, sei)
 }

@@ -24,7 +24,8 @@ import socket from '../services/socket'
 import Sfx from '../services/sfx'
 import axios from 'axios'
 import { checkPosition, setPositionForOverLevel } from '../utils/checkPosition'
-import { just3A } from '../utils/strategy'
+import { just3A, just3B, testStrategy, windexC } from '../utils/strategy'
+import { checkCurrentPriceGateway, setPositionForOverLevelGateway, setPositionGateway } from '../utils/checkPositionGateway'
 
 let LAST_TRADE_TIMESTAMP // to control whether we show timestamp on trade or not
 let LAST_SIDE // to control wheter we show "up" or "down" icon in front of trade
@@ -48,6 +49,7 @@ const analyseTradeSpeed = sample => {
   return MAX_TRADE_SAMPLES / diff
 }
 let positions = []
+let positionsGateway = []
 const { setPosition, checkCurrentPrice } = checkPosition()
 const startTime = new Date().getTime() // 開始時間を保存しておく
 let speedSamples = []
@@ -79,6 +81,21 @@ const getAvarageSpeed = (period = 60) => {
   const speeds = tmpSpeeds.map(sample => sample.value)
   const total = speeds.reduce((acc, value) => acc + value, 0)
   return Math.round(total / speeds.length)
+}
+
+// テスト時に使用する
+// 1分ごとにチェックし、指定したstrategyの売り買いを実行する
+// dotenも含めている
+let testTime = 0
+const shuuki = 30 * 1000 // 周期は30秒をセット
+const testData = [] // テスト時に数合わせが必要なため、必要なデータを一定数保存する
+const checkTestTime = () => {
+  const now = new Date().getTime()
+  if (now > testTime || !testTime) {
+    testTime = Math.floor(now / 1000 / 10) * 10 * 1000 + shuuki
+    return true
+  }
+  return false
 }
 
 const attention = {
@@ -205,6 +222,11 @@ export default {
       if (speedSamples.length === 0) {
         speedSamples = this.$store.state.app.savedSpeeds
       }
+      positionsGateway = checkCurrentPriceGateway(
+        positionsGateway,
+        this.$store.state.app.newPrices.slice(-1)[0]?.price ?? 0,
+        this.$store.state.app.newPrices.slice(-1)[0]?.timestamp ?? 0
+      )
       positions = checkCurrentPrice(
         positions,
         this.$store.state.app.newPrices.slice(-1)[0]?.price ?? 0,
@@ -212,6 +234,12 @@ export default {
       )
       // トレードスピードのチェック
       maintainTradeSpeedSamples(trades)
+
+      // テスト用に使用する適当なデータを保存しておく
+      testData.push(...trades)
+      if (testData.length > 10) {
+        testData.shift()
+      }
       // console.log(this.$store.state.app.newPrices.slice(-1)[0].price)
       for (let i = 0; i < trades.length; i++) {
         if (activeExchanges.indexOf(trades[i].exchange) === -1) {
@@ -235,13 +263,10 @@ export default {
               // 使わない
               isKouho = true
               console.log(`%cbitmexで6Mちょうどロング正指標`, 'color:red')
-              // reasons.push({ reason: 'bitmexで6Mちょうどのロング正指標', code: 'bitmex6M', span: 100, sameLength: 10, side: trade.side })
             } else if (trade.price * trade.size > bigAmount && trade.exchange === 'bitmex' && trade.side === 'buy') {
-              // reasons.push({ reason: 'bitmexで6M以上ロング正指標', code: '', span: 100, sameLength: null })
               isKouho = true
               console.log(`%cbitmexで6M以上ロング正指標`, 'color:red')
             } else if (trade.price * trade.size >= bigAmount && trade.exchange === 'bitmex' && trade.side === 'sell') {
-              // reasons.push({ reason: 'bitmexで6M以上ショート', code: '', span: 100, sameLength: null })
               isKouho = true
               console.log(`%cbitmexで6M以上ショート`, 'color:red')
             }
@@ -257,38 +282,18 @@ export default {
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             } else if (trade.price * trade.size >= 4_500_000 && trade.exchange === 'bybit') {
               // 使う
-              // reasons.push({ reason: 'bybitで4.5M以上正指標説', code: 'bybit4_5M', span: 160, sameLength: 10, side: trade.side })
-
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             } else if (trade.price * trade.size >= 4_000_000 && trade.exchange === 'bybit') {
               // 使う
-              // reasons.push({ reason: 'bybitで4M以上正指標説', code: 'bybit4M', span: 100, sameLength: 10, side: trade.side })
-
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             }
             if (trade.exchange === 'huobi') {
-              // 使う
-              // reasons.push({ reason: '取引所huobi', code: 'huobi', span: 150, sameLength: 10 })
-
+              // 一応
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'huobi', 1)
             }
 
-            // if (trade.exchange === 'bitfinex') {
-            //   // 使う
-            //   console.log(`%c取引所bitfinex`, 'color:red')
-            //   // reasons.push({ reason: '取引所bitfinex', code: 'bitfinex', span: 150, sameLength: 10 })
-
-            //   positions = setPosition(positions, [trade], data, priceSet, speeds, 'bitfinex', 1)
-            // }
-            // 気になる
-            // if (trade.exchange === 'binance') {
-            //   // 使う
-            //   console.log(`%c取引所binance`, 'color:red')
-            //   positions = setPosition(positions, [trade], data, priceSet, speeds, 'binance', 1)
-            // }
             // 気になる数字
             if (['gdax', 'bitstamp', 'okex'].includes(trade.exchange)) {
-              // reasons.push({ reason: '取引所がいい', code: '', span: 100, sameLength: null })
               console.log(`%c取引所がいい`, 'color:red')
 
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'etc_exchange', 1, true)
@@ -307,7 +312,6 @@ export default {
         const executeCheckout = async priceSet => {
           const diffNum = Math.round(priceSet.close - priceSet.open)
           const data = attention.data
-          const isPlus = diffNum > 0 ? true : false
 
           // console.log(positions)
           let amount = 0
@@ -337,26 +341,51 @@ export default {
           const isAllSell = data.every(t => t.side === 'sell')
           const isAllSameSide = isAllBuy || isAllSell
 
-          just3A('just3', data, priceSet, speeds)
+          // positionsGateway = setPositionForOverLevelGateway('just3', data[0].timestamp, just3B, positionsGateway, data, priceSet, speeds, 'just3')
+
           if (binance.length === 2 && data.length === 2) {
             console.log(`%cダブルバイナンス`, 'color:red')
-            just3A('just3', data, priceSet, speeds)
+            // テスト用
+            // positionsGateway = setPositionGateway('test', data[0].timestamp, testStrategy, positionsGateway, data, data, priceSet, speeds, 'test', 2)
             // positions = setPosition(positions, binance, data, priceSet, speeds, '50k_binance', 2)
           } else if (bybit.length === 2 && data.length === 2) {
-            // reasons.push({ reason: 'ダブルbybit', span: 100, sameLength: null })
+            // ダブルバイビッド
             // positions = setPosition(positions, bybit, data, priceSet, speeds, 'wbybit', 2)
             // console.log(`%cダブルbybit`, 'color:red')
           } else if (data.length === 2 && data[0].exchange === 'binance_futures' && data[1].exchange === 'bitmex') {
             console.log(`%cbinance and bitmex`, 'color:red')
             positions = setPosition(positions, data, data, priceSet, speeds, 'bi_bitmex', 2)
           } else if (data.length === 2 && (data[0].exchange === 'binance' || data[1].exchange === 'binance')) {
-            // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
             console.log(`%c片方が少なくともバイナンス`, 'color:red')
             positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
           } else if (data.length === 2) {
+            // windexのうち、bitmex	binance_futuresというのは勝率がなぜか低い(aでもcでも)
+            // そのためbitmexとbinance_futuresの組み合わせは無視する
+            if (
+              (data[0].exchange === 'bitmex' && data[1].exchange === 'binance_futures') ||
+              (data[1].exchange === 'bitmex' && data[0].exchange === 'binance_futures')
+            ) {
+              // 特に何もしない
+            } else {
+              console.log(`%cダブル指標`, 'color:red')
+              positionsGateway = setPositionGateway(
+                'windex',
+                data[0].timestamp,
+                windexC,
+                positionsGateway,
+                data,
+                data,
+                priceSet,
+                speeds,
+                'windex',
+                2,
+                true
+              )
+              // 不要
+              // positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
+            }
+
             // reasons.push({ reason: 'ダブル指標', span: 100, sameLength: null })
-            console.log(`%cダブル指標`, 'color:red')
-            positions = setPosition(positions, data, data, priceSet, speeds, 'windex', 2, true)
           } else if (data.length > 4 && isAllSameSide) {
             console.log(`%c4つ以上指標`, 'color:red')
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'over4')
@@ -365,9 +394,10 @@ export default {
           // 同じ方向の3つの取引&&少なくとも取引所は2つ以上
           if (isAllSameSide && data.length === 3 && !isAllSameExchange) {
             console.log(`%c3つ指標`, 'color:red')
+            positionsGateway = setPositionForOverLevelGateway('just3', data[0].timestamp, just3B, positionsGateway, data, priceSet, speeds, 'just3')
+            // positionsGateway = setPositionGateway('just3', data[0].timestamp, just3B, positionsGateway, data, data, priceSet, speeds, 'just3', 2)
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'just3')
             // 購入
-            just3A('just3', data, priceSet, speeds)
           }
           // 同じ方向の4つの取引&&少なくとも取引所は2つ以上
           if (isAllSameSide && data.length === 4 && !isAllSameExchange) {
@@ -379,18 +409,6 @@ export default {
             positions = setPositionForOverLevel(positions, data, priceSet, speeds, 'bitfinex')
           }
 
-          if (deribit > 0 && data.length > 1) {
-            // buyとsell両方が含まれているかチェック
-            const existBuy = data.some(t => t.side === 'buy')
-            const existSell = data.some(t => t.side === 'sell')
-            const isGood = existBuy && existSell
-            if (isGood) {
-              const allDerbit = data.filter(t => t.exchange === 'deribit')
-              const latestDarbit = allDerbit[allDerbit.length - 1]
-              // reasons.push({ reason: 'deribit逆張り正指標説', code: 'DarbitCon', span: 200, sameLength: 10, side: latestDarbit.side })
-              console.log('deribit逆張り正指標説 side: ', latestDarbit.side, '最新時間: ', latestDarbit.timestamp)
-            }
-          }
           // bitmex逆張り正指標説
           if (bitmex > 0 && data.length > 1 && data.length <= 3) {
             // buyとsell両方が含まれているかチェック
@@ -398,13 +416,7 @@ export default {
             const existSell = data.some(t => t.side === 'sell')
             const isGood = existBuy && existSell
             if (isGood) {
-              const allBitmex = data.filter(t => t.exchange === 'bitmex')
-              const latestBitmex = allBitmex[allBitmex.length - 1]
-
-              positions = setPosition(positions, [latestBitmex], data, priceSet, speeds, 'bitmex_gyaku', 1)
-
-              // reasons.push({ reason: 'bitmex逆張り正指標説', code: 'bitmexCon', span: 200, sameLength: 10, side: latestBitmex.side })
-              console.log('bitmex逆張り正指標説 side: ', latestBitmex.side, '最新時間: ', latestBitmex.timestamp)
+              //逆張りは削除
             } else {
               // こちらはbitmexが１つ以上あり、すべて同じポジ。ここでbitmexとbinance以外の取引所があるかチェックし、あれば2M以上かチェック
               const allNotBitmexAndBinance = data.filter(t => t.exchange !== 'bitmex' && t.exchange !== 'binance_futures')
@@ -419,14 +431,40 @@ export default {
               }
             }
           }
+
+          // ──────────────────────────────────────────
+          // 3/14 テスト取引モードのオンオフはコメントアウトでやってください。
+          // ※ ここをコメントアウトして「この戦略正常に動くか？」というのをテストしてください
+          // ※ gateway側で総売買高コントロールもしているのでそちらも切っておいてください
+          // ※ 取引実行時は、gateway側のtestModeをfalseにしておいてください
+          // ※ dataの数合わせなどはしてください
+          if (checkTestTime()) {
+            const tmp = [testData[0], testData[1]]
+
+            // console.log('テスト取引に入りました！')
+            // positionsGateway = setPositionGateway(
+            //   'windex',
+            //   tmp[0].timestamp,
+            //   windexC,
+            //   positionsGateway,
+            //   tmp,
+            //   tmp,
+            //   priceSet,
+            //   speeds,
+            //   'windex',
+            //   2,
+            //   true
+            // )
+            // テスト実行
+          }
+          // ──────────────────────────────────────────
+
           // 矛盾Binance(現在バイナンスが2つだけのときだけ考慮)
           if (binance.length === 2 && data.length === 2) {
             const allBinance = data.filter(t => t.exchange === 'binance_futures')
             const isSameSide = allBinance.every(t => data[0].side === t.side)
             const total = allBinance.reduce((acc, trade) => acc + trade.price * trade.size)
             if (!isSameSide) {
-              // reasons.push({ reason: 'binance正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
-
               positions = setPosition(positions, binance, data, priceSet, speeds, 'mujun_binance', 2)
 
               console.log(`%c矛盾Binanceチェック`, 'color:red')
@@ -435,66 +473,65 @@ export default {
               }
             }
           }
-          // bybit三連撃(廃止)
+          // bybit三連撃
           if (bybit.length === 3 || bybit.length === 4) {
             const allBybit = data.filter(t => t.exchange === 'bybit')
             const isSameSide = allBybit.every(t => data[0].side === t.side)
             if (isSameSide) {
               positions = setPosition(positions, allBybit, data, priceSet, speeds, '3bybit', 2)
-              // reasons.push({ reason: 'bybit三連以上は正指標説', code: 'bybitover3', span: 100, sameLength: 10, side: data[0].side })
             }
           }
-          //理由の表示
-          if (reasons.length > 0) {
-            const message = reasons.reduce((acc, val) => acc + val.reason + '\n', '')
-            console.log(`%c${message}`, 'color:red')
-          }
+          // 理由制度は削除
+          // //理由の表示
+          // if (reasons.length > 0) {
+          //   const message = reasons.reduce((acc, val) => acc + val.reason + '\n', '')
+          //   console.log(`%c${message}`, 'color:red')
+          // }
 
-          // 条件チェック。「売買する理由」を集めて調整する
-          const checkAllReasons = reasons => {
-            const result = { side: null, priceRange: 0, reason: null }
-            if (reasons.length === 0) return { error: 'なし', result }
+          // 理由制度は削除
+          // // 条件チェック。「売買する理由」を集めて調整する
+          // const checkAllReasons = reasons => {
+          //   const result = { side: null, priceRange: 0, reason: null }
+          //   if (reasons.length === 0) return { error: 'なし', result }
 
-            // 方向チェック、すべてbuyまたはすべてsellと方向が揃ってるならOK。１つでも異なるならNG
-            const sides = reasons.map(t => t.side)
-            const isEverySameSide = sides.every(s => sides[0] === s)
-            if (!isEverySameSide) return { error: 'reasonsの全てのポジが同じ方向ではない', result: null }
+          //   // 方向チェック、すべてbuyまたはすべてsellと方向が揃ってるならOK。１つでも異なるならNG
+          //   const sides = reasons.map(t => t.side)
+          //   const isEverySameSide = sides.every(s => sides[0] === s)
+          //   if (!isEverySameSide) return { error: 'reasonsの全てのポジが同じ方向ではない', result: null }
 
-            // 最大値チェック。ポジりたい値幅の最大値を取得
-            const priceRanges = reasons.map(t => t.span)
-            const maxPriceRange = Math.max(...priceRanges)
+          //   // 最大値チェック。ポジりたい値幅の最大値を取得
+          //   const priceRanges = reasons.map(t => t.span)
+          //   const maxPriceRange = Math.max(...priceRanges)
 
-            // huobiチェック。今の所huobiは１つだけを想定
-            const num = reasons.length
-            const isInvalidForHuobi = reasons.some(reason => reason.code === 'huobi' && num !== 1)
-            if (isInvalidForHuobi) return { error: 'huobiはあるが１ではない', result: null }
+          //   // huobiチェック。今の所huobiは１つだけを想定
+          //   const num = reasons.length
+          //   const isInvalidForHuobi = reasons.some(reason => reason.code === 'huobi' && num !== 1)
+          //   if (isInvalidForHuobi) return { error: 'huobiはあるが１ではない', result: null }
 
-            result.side = sides[0]
-            result.priceRange = maxPriceRange
-            result.reason = reasons[0].reason
+          //   result.side = sides[0]
+          //   result.priceRange = maxPriceRange
+          //   result.reason = reasons[0].reason
 
-            return { error: null, result }
-          }
+          //   return { error: null, result }
+          // }
 
-          // 理由があるとき
-          if (reasons.length > 0) {
-            const result = checkAllReasons(reasons)
-            if (result.error) {
-              console.log(`%c${result.error}`, 'color:red')
-            } else {
-              // ここで売買を実行
-              // UTCでの時間と、理由も書く
-              const side = result.result.side
-              const priceRange = result.result.priceRange
-              const reason = result.result.reason
-              axios.get(`${awsApiUrl}?mailSubject=${side}です&mailMessage=${reason} ${priceRange}で取る！`)
-              console.table(result.result)
-            }
-          }
+          // // 理由があるとき
+          // if (reasons.length > 0) {
+          //   const result = checkAllReasons(reasons)
+          //   if (result.error) {
+          //     console.log(`%c${result.error}`, 'color:red')
+          //   } else {
+          //     // ここで売買を実行
+          //     // UTCでの時間と、理由も書く
+          //     const side = result.result.side
+          //     const priceRange = result.result.priceRange
+          //     const reason = result.result.reason
+          //     axios.get(`${awsApiUrl}?mailSubject=${side}です&mailMessage=${reason} ${priceRange}で取る！`)
+          //     console.table(result.result)
+          //   }
+          // }
           console.log('始値', Math.round(priceSet.open), '終値', Math.round(priceSet.close))
-          const plusOrMinus = isPlus > 0 ? '陽線' : '陰線'
-          const threePriceRange = Math.round(priceSet.close - priceSet.threeOpen)
-          console.log(`%c${diffNum} ${plusOrMinus} 3値幅${threePriceRange}`, 'color:red')
+
           console.log('３つ前のopen', priceSet.threeOpen)
           setTimeout(() => {
             console.log(
