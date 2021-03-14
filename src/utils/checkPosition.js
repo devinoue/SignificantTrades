@@ -271,7 +271,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
-      orderPosition(value.sheet, 'pay', value.id)
+      // orderPosition(value.sheet, 'pay', value.id)
       axios.post(gasApiUrl, postData)
     } else if (value.close - 100 > price && !testMode) {
       // 100ドルより下回ったと送信
@@ -290,7 +290,7 @@ export const checkCurrentPrice = (positions, price, timestamp) => {
         sheet: value.sheet,
         data: mainData
       }
-      orderPosition(value.sheet, 'pay', value.id)
+      // orderPosition(value.sheet, 'pay', value.id)
       axios.post(gasApiUrl, postData)
     } else if (value.close + 70 < price && value.additionalData.result70Time === 0) {
       // 70ドルだけ上昇した場合
