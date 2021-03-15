@@ -40,3 +40,25 @@ export function testStrategy(id, trades, data, priceSet, speeds) {
   const { amount0, amount1, speed1, sei } = formatReadability(data[0].timestamp, trades, data, priceSet, speeds)
   orderPosition('test', 'new', id, sei)
 }
+
+export function bybit4overB3(id, trades, data, priceSet, speeds) {
+  console.log('bybit4overB3入った')
+  const { close, close3, total, amount0, sei, gyaku } = formatReadability(trades[0].timestamp, trades, data, priceSet, speeds)
+
+  if (Math.abs((total / amount0) * Math.abs(close3 - close)) > 20) {
+    orderPosition('bybit4over', 'new', id, sei)
+  } else {
+    orderPosition('bybit4over', 'new', id, gyaku)
+  }
+}
+
+export function wbinanceC4(id, trades, data, priceSet, speeds) {
+  console.log('wbinanceC4入った')
+  const { close, close5, total, amount0, sei, gyaku } = formatReadability(trades[0].timestamp, trades, data, priceSet, speeds)
+  const diff = Math.abs(close5 - close)
+  if (diff > 90 && diff < 310) {
+    orderPosition('wbinance', 'new', id, sei)
+  } else {
+    orderPosition('wbinance', 'new', id, gyaku)
+  }
+}

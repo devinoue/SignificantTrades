@@ -24,7 +24,7 @@ import socket from '../services/socket'
 import Sfx from '../services/sfx'
 import axios from 'axios'
 import { checkPosition, setPositionForOverLevel } from '../utils/checkPosition'
-import { just3A, just3B, testStrategy, windexC } from '../utils/strategy'
+import { bybit4overB3, just3A, just3B, testStrategy, wbinanceC4, windexC } from '../utils/strategy'
 import { checkCurrentPriceGateway, setPositionForOverLevelGateway, setPositionGateway } from '../utils/checkPositionGateway'
 
 let LAST_TRADE_TIMESTAMP // to control whether we show timestamp on trade or not
@@ -277,16 +277,24 @@ export default {
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'kouho', 1)
             }
 
-            if (trade.price * trade.size >= 5_000_000 && trade.exchange === 'bybit') {
+            // ★★★★★★★★★★★★★★★★★★
+            if (trade.price * trade.size >= 4_000_000 && trade.exchange === 'bybit') {
               // 使う
-              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
-            } else if (trade.price * trade.size >= 4_500_000 && trade.exchange === 'bybit') {
-              // 使う
-              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
-            } else if (trade.price * trade.size >= 4_000_000 && trade.exchange === 'bybit') {
-              // 使う
-              positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
+              positionsGateway = setPositionGateway(
+                'bybit4over',
+                trade.timestamp,
+                bybit4overB3,
+                positionsGateway,
+                [trade],
+                data,
+                priceSet,
+                speeds,
+                'bybit4over',
+                1
+              )
+              // positions = setPosition(positions, [trade], data, priceSet, speeds, 'bybit4over', 1)
             }
+
             if (trade.exchange === 'huobi') {
               // 一応
               positions = setPosition(positions, [trade], data, priceSet, speeds, 'huobi', 1)
@@ -357,7 +365,22 @@ export default {
             positions = setPosition(positions, data, data, priceSet, speeds, 'bi_bitmex', 2)
           } else if (data.length === 2 && (data[0].exchange === 'binance' || data[1].exchange === 'binance')) {
             console.log(`%c片方が少なくともバイナンス`, 'color:red')
-            positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
+
+            // ★★★★★★★★★★★★★★★★★★
+            positionsGateway = setPositionGateway(
+              'wbinance',
+              data[0].timestamp,
+              wbinanceC4,
+              positionsGateway,
+              data,
+              data,
+              priceSet,
+              speeds,
+              'wbinance',
+              2,
+              true
+            )
+            // positions = setPosition(positions, data, data, priceSet, speeds, 'wbinance', 2, true)
           } else if (data.length === 2) {
             // windexのうち、bitmex	binance_futuresというのは勝率がなぜか低い(aでもcでも)
             // そのためbitmexとbinance_futuresの組み合わせは無視する
@@ -367,6 +390,7 @@ export default {
             ) {
               // 特に何もしない
             } else {
+              // ★★★★★★★★★★★★★★★★★★
               console.log(`%cダブル指標`, 'color:red')
               positionsGateway = setPositionGateway(
                 'windex',
