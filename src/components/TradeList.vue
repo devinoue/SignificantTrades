@@ -321,7 +321,10 @@ export default {
           const diffNum = Math.round(priceSet.close - priceSet.open)
           const data = attention.data
 
-          // console.log(positions)
+          console.log('Positions: ')
+          console.log(positions)
+          console.log('PositionsGateway: ')
+          console.log(positionsGateway)
           let amount = 0
           if (data.length >= 4) {
             console.log(`%c4つ以上ある！`, 'color:red')
@@ -784,7 +787,7 @@ export default {
           this.$store.commit('app/SET_SPEEDS', speedSamples)
 
           // リロードチェック
-          if (passHours >= 7 && positions.length === 0) {
+          if (passHours >= 7 && positions.length === 0 && positionsGateway.length === 0) {
             location.reload()
           }
         }

@@ -67,8 +67,8 @@ const checkPositions = async () => {
   const res = await bitflyer.privateGetGetpositions({ product_code: 'FX_BTC_JPY' })
   if (res.length === 0 && position.side) {
     // 齟齬があるのでpositionをリセットし通知
-    sendError('齟齬がありました', 'ローカルポジションはあるのに、リモートには何もない状況がありました')
-    resetPosition()
+    sendError('微妙な齟齬がありました', 'ローカルポジションはあるのに、リモートには何もない状況がありました')
+    // resetPosition()
     return
   }
   if (res.length > 0 && position.side === null) {
@@ -172,7 +172,7 @@ app.post('/order', async (req, res) => {
         position.unixtime = new Date().getTime()
         position.id = Number(data.id)
       }
-      const url = encodeURI(`${env.awsApiUrl}?mailSubject=注文しました&mailMessage=${posResult.id} の注文をしました`)
+      const url = encodeURI(`${env.awsApiUrl}?mailSubject=注文しました&mailMessage=${posResult.id} ${posResult.side} の注文をしました`)
       axios.get(url)
     } catch (e) {
       si = undefined
@@ -184,7 +184,7 @@ app.post('/order', async (req, res) => {
 })
 
 // 戦略の優先順は「数字が大きいほど」優先度が高い
-const strategyPriority = { test: 5, just3: 4, huobi: 4, windex: 6, etc_exchange: 2 }
+const strategyPriority = { bybit4over: 2, test: 5, just3: 4, windex: 6, wbinance: 5 }
 
 const isPriorityHigh = (position, data) => {
   if (!strategyPriority[position.strategy] || !strategyPriority[data.strategy]) return 0
@@ -205,17 +205,17 @@ const isOverThreshold = data => {
   }
   if (data.strategy === 'over4') {
     if (median.over4 > 47) {
-      return true
+      return false
     }
   }
   if (data.strategy === 'just3') {
     if (median.windex > 16.2) {
-      return true
+      return false
     }
   }
   if (data.strategy === 'wbinance') {
     if (median.windex < 16.4) {
-      return true
+      return false
     }
   }
   if (data.strategy === 'bybit4over') {
