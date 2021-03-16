@@ -73,6 +73,15 @@ const checkPositions = async () => {
   }
   if (res.length > 0 && position.side === null) {
     sendError('重大な齟齬がありました', 'リモートポジションはあるのに、ローカルには何もない状況がありました。ただちに対処してください')
+    if (res[0].side === 'SELL') {
+      const res = await bitflyer.createMarketBuyOrder('FX_BTC_JPY', 0.01)
+      console.log(res?.data)
+      logs.push(`[${dayjs.tz().format()}] 緊急の買い注文を入れました\n`)
+    } else if (res[0].side === 'BUY') {
+      const res = await bitflyer.createMarketSellOrder('FX_BTC_JPY', 0.01)
+      console.log(res?.data)
+      logs.push(`[${dayjs.tz().format()}] 緊急の売り注文を入れました\n`)
+    }
     return
   }
   console.log(`現在の建玉は以下の通りです:`, res)
@@ -113,25 +122,29 @@ const sellOrder = async () => {
 }
 
 const orderMarket = async data => {
-  if (data.action === 'doten') {
-    logs.push(`[${dayjs.tz().format()}] ドテンのためID: ${position.id} を決済します。\n`)
-    if (data.side === 'buy') {
-      // 新しい注文がロングなら、今ある注文はショートなので、一旦ロング
-      const res = await buyOrder()
-      console.log(res?.data)
-    } else if (data.side === 'sell') {
-      // 新しい注文がショートなら、今ある注文はロングなので、一旦ショート
-      const res = await sellOrder()
-      console.log(res?.data)
+  try {
+    if (data.action === 'doten') {
+      logs.push(`[${dayjs.tz().format()}] ドテンのためID: ${position.id} を決済します。\n`)
+      if (data.side === 'buy') {
+        // 新しい注文がロングなら、今ある注文はショートなので、一旦ロング
+        const res = await buyOrder()
+        console.log(res?.data)
+      } else if (data.side === 'sell') {
+        // 新しい注文がショートなら、今ある注文はロングなので、一旦ショート
+        const res = await sellOrder()
+        console.log(res?.data)
+      }
     }
-  }
-  logs.push(`[${dayjs.tz().format()}] ID: ${data.id} を新しく注文します。\n`)
-  if (data.side === 'buy') {
-    await buyOrder()
-  } else if (data.side === 'sell') {
-    await sellOrder()
-  } else {
-    throw new Error('sideがない')
+    logs.push(`[${dayjs.tz().format()}] ID: ${data.id} を新しく注文します。\n`)
+    if (data.side === 'buy') {
+      await buyOrder()
+    } else if (data.side === 'sell') {
+      await sellOrder()
+    } else {
+      throw new Error('sideがない')
+    }
+  } catch (e) {
+    logs.push(`[${dayjs.tz().format()}] Error: ${e.message} \n`)
   }
 }
 
@@ -296,7 +309,7 @@ const sendError = async (title, message) => {
   // APIに飛ばす
   const url = encodeURI(`${env.awsApiUrl}?mailSubject=${title}&mailMessage=${message}`)
   await axios.get(url)
-  logs.push(`[${dayjs.tz().format()}] 自動更新を停止してください\n`)
+  logs.push(`[${dayjs.tz().format()}] ${title} ${message}\n`)
 }
 
 // ポート3001でサーバを立てる
